@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation Playground — DevAI NEO</title>
+  <!-- Root landing page for GitHub Pages: links out to every case in /pages. -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <style>
+    body { background: var(--neo-app-bg); }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: var(--space-10) var(--space-5) var(--space-12); }
+    .head { margin-bottom: var(--space-10); }
+    .head h1 { font-size: var(--text-3xl); font-weight: 700; color: var(--neo-fg-1); letter-spacing: -0.02em; margin-bottom: var(--space-2); }
+    .head p { font-size: var(--text-sm); color: var(--neo-fg-3); max-width: 62ch; }
+    .section + .section { margin-top: var(--space-10); }
+    .section h2 {
+      font-size: var(--text-xs); font-weight: 700; color: var(--neo-fg-4);
+      text-transform: uppercase; letter-spacing: .06em;
+      padding-bottom: var(--space-2); margin-bottom: var(--space-4);
+      border-bottom: 1px solid var(--neo-border);
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-4); }
+    .card {
+      display: block; text-decoration: none;
+      background: var(--neo-surface); border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md);
+      padding: var(--space-4) var(--space-5); transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    }
+    .card:hover { border-color: var(--neo-indigo-hair); box-shadow: var(--shadow-3); transform: translateY(-1px); }
+    .card .t { font-size: var(--text-sm); font-weight: 700; color: var(--neo-fg-1); margin-bottom: var(--space-1); }
+    .card .d { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-body); }
+    footer { margin-top: var(--space-12); font-size: var(--text-xs); color: var(--neo-fg-4); }
+    footer a { color: var(--neo-link); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1>Animation Playground</h1>
+      <p>A lab for prototyping web-based animations and DevAI NEO product mockups — GSAP, SVG, and CSS/Web Animations experiments. Each page below is self-contained; open it directly, no build step.</p>
+    </div>
+
+    <div class="section">
+      <h2>DevAI NEO — product mockups</h2>
+      <div class="grid">
+        <a class="card" href="pages/discrepancy-comparison.html">
+          <div class="t">Discrepancy comparison</div>
+          <div class="d">Source-comparison view: two-tool KPI cards, multi-select filter chips, sortable table, simulated live-refresh.</div>
+        </a>
+        <a class="card" href="pages/dashboard.html">
+          <div class="t">Dashboard</div>
+          <div class="d">Server search dashboard body.</div>
+        </a>
+        <a class="card" href="pages/search-results.html">
+          <div class="t">Search results</div>
+          <div class="d">Keyword search results grouped by data source, with a GSAP-orchestrated reveal animation.</div>
+        </a>
+        <a class="card" href="pages/IncidentLandscape.html">
+          <div class="t">Incident landscape</div>
+          <div class="d">Incident results view (INC0012202).</div>
+        </a>
+        <a class="card" href="pages/Trends.html">
+          <div class="t">Trends</div>
+          <div class="d">Trends view.</div>
+        </a>
+        <a class="card" href="pages/showcase.html">
+          <div class="t">Showcase</div>
+          <div class="d">DevAI NEO showcase.</div>
+        </a>
+        <a class="card" href="pages/SolutionDiagram.html">
+          <div class="t">Solution diagram</div>
+          <div class="d">DevAI solution hub / architecture diagram.</div>
+        </a>
+        <a class="card" href="pages/BrandingDiagram_ButtflyModel.html">
+          <div class="t">Buttfly model animation</div>
+          <div class="d">NEO branding animation.</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Animation experiments</h2>
+      <div class="grid">
+        <a class="card" href="pages/Assets_Preloader_UseCase.html">
+          <div class="t">Preloader assets use case</div>
+          <div class="d">Asset-preloading pattern.</div>
+        </a>
+        <a class="card" href="pages/[Baseline]FlowLine_GSAP_DrawlinePlugin.html">
+          <div class="t">River line flow (baseline)</div>
+          <div class="d">GSAP DrawSVG-driven line-flow animation.</div>
+        </a>
+        <a class="card" href="pages/[Baseline]_3phasesAnimation.html">
+          <div class="t">Linear process animation (baseline)</div>
+          <div class="d">3-phase linear process animation.</div>
+        </a>
+      </div>
+    </div>
+
+    <footer>
+      Prototypes for experimentation, not production. Source: <a href="https://github.com/JoInHouse/case_showbox">github.com/JoInHouse/case_showbox</a>
+    </footer>
+  </div>
+</body>
+</html>
