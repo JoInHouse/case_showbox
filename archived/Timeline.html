@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="'UTF-8'" />
+        <title>GSAP-Timeline</title>
+        <link rel="stylesheet" href="CSS/styles.css" />
+        <style>
+            body {
+                display:flex;
+                align-items: center;
+                justify-content: space-around;
+                flex-direction: column;
+                min-height: 100vh;
+                background-color: black;
+            }
+            
+        </style>
+    </head>
+
+    <body>
+        <script src="JS/gsap.min.js"></script>
+        
+        <div class="box gradient-green"></div>
+        <div class="box gradient-blue"></div>
+        <div class="box gradient-purple"></div>
+
+        <script>
+            let tl = gsap.timeline({yoyo:true,repeat:-1,repeatDelay:0.5,})
+
+            tl.to(".gradient-green",{
+                x:600,
+                duration:2,
+            },1);
+            tl.to(".gradient-blue",{
+                x:600,
+                duration:1,
+            },"<");
+            tl.to(".gradient-purple",{
+                x:600,
+                duration:1,
+            },"-=1");
+
+        </script>
+
+
+    </body>
+</html>

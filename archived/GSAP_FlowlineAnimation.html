@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSAP River Flow Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .flow-line {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+        }
+
+        /* Base dim paths for reference */
+        .base-line {
+            fill: none;
+            stroke: #3C3F58;
+            stroke-width: 0.5px;
+            opacity: 0.2;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/DrawSVGPlugin.min.js"></script>
+</head>
+<body>
+    <svg width="1980" height="767" viewBox="0 0 1980 767" fill="none">
+        <defs>
+            <!-- Gradient definitions for each line -->
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient6" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient7" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient8" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient9" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient10" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+            </linearGradient>
+
+            <!-- Glow filters -->
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        
+        <!-- Base paths (dim background) -->
+        <g id="basePaths">
+            <path class="base-line" d="M4.24805 262.363C88.8438 314.615 277.826 361.558 447.017 314.615C512.658 296.403 577.45 241.928 606.935 241.928C656.41 241.928 689.893 299.539 740.367 307.077C780.746 313.108 909.779 311.385 970.248 311.385"/>
+            <path class="base-line" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+            <path class="base-line" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="base-line" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="base-line" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <path class="base-line" d="M4 581C253.301 367 507.156 313 970 313"/>
+            <path class="base-line" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+            <path class="base-line" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+            <path class="base-line" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <path class="base-line" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+        </g>
+        
+        <!-- Animated flow lines -->
+        <g id="flowLines">
+            <path class="flow-line" data-speed="24" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M4.24805 262.363C88.8438 314.615 277.826 361.558 447.017 314.615C512.658 296.403 577.45 241.928 606.935 241.928C656.41 241.928 689.893 299.539 740.367 307.077C780.746 313.108 909.779 311.385 970.248 311.385"/>
+            <path class="flow-line" data-speed="15" data-width="1" stroke="url(#gradient2)" filter="url(#glow)" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+            <path class="flow-line" data-speed="24" data-width="2" stroke="url(#gradient3)" filter="url(#glow)" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="flow-line" data-speed="28" data-width="1" stroke="url(#gradient4)" filter="url(#glow)" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="flow-line" data-speed="10" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <path class="flow-line" data-speed="9" data-width="1.5" stroke="url(#gradient6)" filter="url(#glow)" d="M4 581C253.301 367 507.156 313 970 313"/>
+            <path class="flow-line" data-speed="9" data-width="2" stroke="url(#gradient7)" filter="url(#glow)" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+            <path class="flow-line" data-speed="15" data-width="2" stroke="url(#gradient8)" filter="url(#glow)" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+            <path class="flow-line" data-speed="9" data-width="2.5" stroke="url(#gradient9)" filter="url(#glow)" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <path class="flow-line" data-speed="10" data-width="2.5" stroke="url(#gradient1)" filter="url(#glow)" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+        </g>
+
+        <!-- Right side flow lines -->
+        <g id="rightFlowLines">
+            <path class="flow-line" data-speed="12" data-width="2" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+            <path class="flow-line" data-speed="12" data-width="1" stroke="url(#gradient5)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+            <path class="flow-line" data-speed="4" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+            <path class="flow-line" data-speed="6" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+            <!--path class="flow-line" data-speed="2.5" data-width="1" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1508.24 470.135 1977 470.135" /-->
+            <path class="flow-line" data-speed="4.5" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+            <path class="flow-line" data-speed="5" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+            <!--path class="flow-line" data-speed="9" data-width="3" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1797 -91.3652 1977 125.135" /-->
+            <path class="flow-line" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+            <path class="flow-line" data-speed="2" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+
+        </g>
+    </svg>
+
+    <script>
+        // GSAP Animation using DrawSVG plugin fallback with stroke-dasharray
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const flowLines = document.querySelectorAll('.flow-line');
+
+            // Seeded random number generator
+            //const seededRandom = (seed) => {
+            //    const x = Math.sin(seed) * 10000;
+            //    return x - Math.floor(x);
+            //};
+            
+            flowLines.forEach((line, index) => {
+                const length = line.getTotalLength();
+                const speed = parseFloat(line.dataset.speed) || 3;
+                const strokeWidth = parseFloat(line.dataset.width) || 2;
+
+                //random patterns:
+                const createVariedPattern = () => {
+                    const segments = [];
+                    let totalLength = 0;
+                    
+                    while (totalLength < length * 2) {
+                        const visible = length * (0.5 + Math.random() * 0.5);
+                        const gap = length * (0.01 + Math.random() * 0.05);
+                        segments.push(visible, gap);
+                        totalLength += visible + gap;
+                    }
+                    
+                    return segments.join(' ');
+                };
+                
+                // Set initial styles
+                line.style.strokeWidth = strokeWidth + 'px';
+                //line.style.strokeDasharray = `${length * 0.9} ${length * 0.1}`; // 30% gap, 70% visible
+                line.style.strokeDasharray = createVariedPattern();
+                line.style.strokeDashoffset = length;
+                
+                // Create smooth continuous flow animation
+                gsap.to(line, {
+                    strokeDashoffset: -length * 2,
+                    duration: speed,
+                    ease:  "none",  // Linear movement for constant speed
+                    repeat: -1
+                });
+                
+                // Add slight pulsing to stroke width for organic feel
+                gsap.to(line, {
+                    strokeWidth: strokeWidth * 1.5,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.2
+                });
+                
+                // Add subtle opacity variation
+                gsap.to(line, {
+                    opacity: 0.3,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.15
+                });
+            });
+            
+            // Alternative: Create particle-like segments flowing
+            function createFlowingSegments() {
+                flowLines.forEach((line, lineIndex) => {
+                    const length = line.getTotalLength();
+                    const speed = parseFloat(line.dataset.speed) || 3;
+                    
+                    // Create multiple segment animations
+                    for (let i = 0; i < 5; i++) {
+                        const segment = line.cloneNode();
+                        line.parentNode.appendChild(segment);
+                        
+                        // Each segment is a portion of the line
+                        const segmentLength = length * 0.05; // 15% of total length
+                        segment.style.strokeDasharray = `${segmentLength} ${length}`;
+                        segment.style.opacity = 0;
+                        
+                        // Animate each segment with offset timing
+                        gsap.timeline({ repeat: -1, delay: i * (speed / 2) })
+                            .set(segment, { 
+                                strokeDashoffset: length + segmentLength,
+                                opacity: 0 
+                            })
+                            .to(segment, {
+                                strokeDashoffset: -segmentLength,
+                                opacity: 1,
+                                duration: speed * 0.1,
+                                ease: "power2.in"
+                            })
+                            .to(segment, {
+                                strokeDashoffset: -length,
+                                opacity: 1,
+                                duration: speed * 0.8,
+                                ease: "none"
+                            })
+                            .to(segment, {
+                                strokeDashoffset: -length - segmentLength,
+                                opacity: 0,
+                                duration: speed * 0.1,
+                                ease: "power2.out"
+                            });
+                    }
+                });
+            }
+            
+            
+            // Add glow intensity variation
+            const glowFilter = document.querySelector('#glow feGaussianBlur');
+            if (glowFilter) {
+                gsap.to(glowFilter, {
+                    attr: { stdDeviation: 6 },
+                    duration: 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut"
+                });
+            }
+        });
+    </script>
+</body>
+</html>

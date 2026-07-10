@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Line Flow with Canvas Particles</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        .container {
+            position: relative;
+            max-width: 100%;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .flow-line, .r-flow-line {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <svg width="1980" height="767" viewBox="0 0 1980 767" fill="none">
+            <defs>
+                <!-- Gradient definitions for each line -->
+                <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#32C7A9" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#32C7A9" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#74A3DD" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#74A3DD" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#EC7FEC" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#EC7FEC" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#F39B77" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#F39B77" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#2E69B5" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#2E69B5" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient6" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#54C6FB" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#54C6FB" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient7" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#51FDA3" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#51FDA3" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient8" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#7168EB" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#7168EB" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient9" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#0CA1E0" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#0CA1E0" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+                </linearGradient>
+                
+                <linearGradient id="gradient10" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                    <stop offset="20%" stop-color="#6AE7FB" stop-opacity="1"/>
+                    <stop offset="80%" stop-color="#6AE7FB" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+                </linearGradient>
+
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            
+            <!-- Flowlines Set -->
+            <g id="flowLines">
+                <path class="flow-line" id="path1" data-width="1.5" data-speed="2" stroke="url(#gradient1)" filter="url(#glow)" d="M4.24805 262.363C88.8438 314.615 277.826 361.558 447.017 314.615C512.658 296.403 577.45 241.928 606.935 241.928C656.41 241.928 689.893 299.539 740.367 307.077C780.746 313.108 909.779 311.385 970.248 311.385"/>
+                <path class="flow-line" id="path2" data-width="2" data-speed="2" stroke="url(#gradient2)" filter="url(#glow)" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+                <path class="flow-line" id="path3" data-width="1" data-speed="2.4" stroke="url(#gradient3)" filter="url(#glow)" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+                <path class="flow-line" id="path4" data-width="1" data-speed="2.6" stroke="url(#gradient4)" filter="url(#glow)" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+                <path class="flow-line" id="path5" data-width="2" data-speed="2.8" stroke="url(#gradient5)" filter="url(#glow)" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+                <path class="flow-line" id="path6" data-width="1.5" data-speed="3" stroke="url(#gradient6)" filter="url(#glow)" d="M4 581C253.301 367 507.156 313 970 313"/>
+                <path class="flow-line" id="path7" data-width="3" data-speed="2.2" stroke="url(#gradient7)" filter="url(#glow)" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+                <path class="flow-line" id="path8" data-width="2" data-speed="2" stroke="url(#gradient8)" filter="url(#glow)" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+                <path class="flow-line" id="path9" data-width="1" data-speed="1.6" stroke="url(#gradient9)" filter="url(#glow)" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+                <path class="flow-line" id="path10" data-width="3" data-speed="1.8" stroke="url(#gradient10)" filter="url(#glow)" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+            </g>
+
+            <!-- Right side flow lines -->
+            <g id="rightFlowLines">
+                <path class="r-flow-line" id="rpath1" data-speed="3" data-width="2" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+                <path class="r-flow-line" id="rpath2" data-speed="3" data-width="1" stroke="url(#gradient5)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+                <path class="r-flow-line" id="rpath3" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+                <path class="r-flow-line" id="rpath4" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+                <path class="r-flow-line" id="rpath5" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+                <path class="r-flow-line" id="rpath6" data-speed="3" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+                <path class="r-flow-line" id="rpath7" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+                <path class="r-flow-line" id="rpath8" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+            </g>
+        </svg>
+
+        <canvas id="particleCanvas" width="1980" height="767"></canvas>
+    </div>
+
+    <script>
+        // SHARED CONFIGURATION
+        const pathColors = [
+            '#25FFD3', '#A6CEFF', '#FFACFF', '#FFC1A7', '#5A99EA',
+            '#90DCFF', '#77FFB8', '#A59EFF', '#5FD0FF', '#82EEFF'
+        ];
+    
+        // Canvas setup
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        const svg = document.querySelector('svg');
+    
+        // Resize canvas to match SVG rendering and keep same coordinate system
+        function resizeCanvas() {
+            const rect = svg.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+    
+            // Set canvas internal resolution (pixels)
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+    
+            // Match CSS size to SVG
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+    
+            // Reset transform then scale to match SVG viewBox
+            ctx.setTransform(
+                canvas.width / svg.viewBox.baseVal.width,
+                0,
+                0,
+                canvas.height / svg.viewBox.baseVal.height,
+                0,
+                0
+            );
+        }
+    
+        // Store all active particles
+        const activeParticles = new Map();
+    
+        // Particle class for canvas rendering
+        class CanvasParticle {
+            constructor(pathElement, color, particleId) {
+                this.path = pathElement;
+                this.color = color;
+                this.id = particleId;
+                this.history = [];
+                this.maxTrailLength = 8;
+                this.isActive = false;
+                this.currentPosition = { x: 0, y: 0 };
+            }
+    
+            updatePosition(x, y) {
+                this.currentPosition = { x, y };
+                this.history.push({ x, y });
+                if (this.history.length > this.maxTrailLength) {
+                    this.history.shift();
+                }
+            }
+    
+            activate() {
+                this.isActive = true;
+                this.history = [];
+            }
+    
+            deactivate() {
+                this.isActive = false;
+                this.history = [];
+            }
+        }
+    
+        // Animate a comet along a path
+        function animateCometStream(path, particleId, pathColor) {
+            const particle = activeParticles.get(particleId);
+            if (!particle) return;
+    
+            const pathLength = path.getTotalLength();
+            particle.activate();
+    
+            gsap.to({}, {
+                duration: 3,
+                ease: "none",
+                onUpdate: function () {
+                    const progress = this.progress();
+                    const point = path.getPointAtLength(progress * pathLength);
+                    particle.updatePosition(point.x, point.y);
+                },
+                onComplete: function () {
+                    particle.deactivate();
+                }
+            });
+        }
+    
+        // Render loop – draws all comets each frame
+        function renderParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+            activeParticles.forEach(particle => {
+                if (!particle.isActive || particle.history.length === 0) return;
+    
+                // Draw trail
+                particle.history.forEach((pos, i) => {
+                    const alpha = (i + 1) / particle.history.length * 0.7;
+                    const radius = 3 * ((i + 1) / particle.history.length * 0.8 + 0.2);
+    
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = alpha;
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = particle.color;
+                    ctx.fill();
+                });
+    
+                // Draw comet head
+                const { x, y } = particle.currentPosition;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = particle.color;
+                ctx.fill();
+    
+                // Reset
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            });
+    
+            requestAnimationFrame(renderParticles);
+        }
+    
+        // Create particles for paths
+        function createParticlesForPath(pathIndex, pathElement, particlePrefix) {
+            const particleId = `${particlePrefix}${pathIndex + 1}`;
+            const color = pathColors[pathIndex % pathColors.length];
+            const particle = new CanvasParticle(pathElement, color, particleId);
+            activeParticles.set(particleId, particle);
+        }
+    
+        function animatePathDrawing(paths, particlePrefix) {
+            paths.forEach((path, pathIndex) => {
+                if (!path) return;
+    
+                createParticlesForPath(pathIndex, path, particlePrefix);
+    
+                const pathLength = path.getTotalLength();
+                const speed = parseFloat(path.dataset.speed) || 2;
+    
+                // Initialize path as invisible
+                path.style.strokeDasharray = `0 ${pathLength}`;
+    
+                const timeline = gsap.timeline({ repeat: -1, delay: pathIndex * 2 });
+    
+                // Phase 1: Draw the path
+                timeline.fromTo(path,
+                    { strokeDasharray: `0 ${pathLength}` },
+                    {
+                        strokeDasharray: `${pathLength} ${pathLength}`,
+                        duration: speed,
+                        ease: "power2.out"
+                    }
+                );
+    
+                // Phase 2: Launch comet particle
+                timeline.add(() => {
+                    const particleId = `${particlePrefix}${pathIndex + 1}`;
+                    animateCometStream(path, particleId, pathColors[pathIndex % pathColors.length]);
+                });
+    
+                timeline.to({}, { duration: 3 }); // wait for comet
+    
+                // Phase 3: Shrink with forward flow
+                timeline.to(path, {
+                    strokeDasharray: `0 ${pathLength}`,
+                    strokeDashoffset: -pathLength,
+                    duration: 2,
+                    ease: "power2.in"
+                });
+    
+                // Reset pause
+                timeline.to({}, { duration: 1 });
+            });
+        }
+    
+        function addLineEffects(selector) {
+            const lines = document.querySelectorAll(selector);
+    
+            lines.forEach((line, index) => {
+                const strokeWidth = parseFloat(line.dataset.width) || 2;
+                const speed = parseFloat(line.dataset.speed) || 3;
+    
+                line.style.strokeWidth = strokeWidth + 'px';
+    
+                gsap.to(line, {
+                    strokeWidth: strokeWidth * 1.5,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.2
+                });
+    
+                gsap.to(line, {
+                    opacity: 0.3,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.15
+                });
+            });
+        }
+    
+        // INITIALIZE ANIMATIONS
+        document.addEventListener('DOMContentLoaded', function () {
+            resizeCanvas();
+            renderParticles();
+    
+            // Handle resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    resizeCanvas();
+                    // Reset history so new positions map correctly
+                    activeParticles.forEach(particle => {
+                        if (particle.isActive) {
+                            particle.history = [];
+                        }
+                    });
+                }, 150);
+            });
+    
+            // LEFT SIDE
+            const leftPaths = [
+                document.getElementById('path1'),
+                document.getElementById('path2'),
+                document.getElementById('path3'),
+                document.getElementById('path4'),
+                document.getElementById('path5'),
+                document.getElementById('path6'),
+                document.getElementById('path7'),
+                document.getElementById('path8'),
+                document.getElementById('path9'),
+                document.getElementById('path10')
+            ];
+            animatePathDrawing(leftPaths, 'left');
+            addLineEffects('.flow-line');
+    
+            // RIGHT SIDE
+            const rightPaths = [
+                document.getElementById('rpath1'),
+                document.getElementById('rpath2'),
+                document.getElementById('rpath3'),
+                document.getElementById('rpath4'),
+                document.getElementById('rpath5'),
+                document.getElementById('rpath6'),
+                document.getElementById('rpath7'),
+                document.getElementById('rpath8')
+            ];
+            animatePathDrawing(rightPaths, 'right');
+            addLineEffects('.r-flow-line');
+    
+            // Global glow effect
+            const glowFilter = document.querySelector('#glow feGaussianBlur');
+            if (glowFilter) {
+                gsap.to(glowFilter, {
+                    attr: { stdDeviation: 6 },
+                    duration: 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut"
+                });
+            }
+        });
+    </script>
+    
+    
+</body>
+</html>

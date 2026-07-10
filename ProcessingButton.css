@@ -1,0 +1,116 @@
+/**
+ * ProcessingButton Component Styles
+ * Reusable styles for the ProcessingButton component
+ */
+
+/* Gradient swipe animation */
+@keyframes gradientSwipe {
+    0% {
+        background-position: 0% center;
+    }
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.button {
+    display: flex;
+    color:#06001a;
+    height: 34px;
+    padding: 8px 12px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    font-size: small;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    gap: 8px;
+    border-radius: 24px;
+    border: 1px solid #a5b3cd;
+    background: linear-gradient(285deg, rgba(8, 118, 245, 0.24) 0%, rgba(213, 173, 253, 0.35) 100%);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Hover effects - only when NOT processing */
+.button:hover:not(.processing) {
+    background: #0876F5;
+    color: #ffffff;
+    border-color: #0876F5;
+}
+
+.button img {
+    width: 16px;
+    height: 16px;
+    transition: filter 0.3s ease;
+}
+
+.button:hover:not(.processing) img {
+    filter: brightness(0) invert(1);
+}
+
+.icon-default,
+.icon-processing {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-processing {
+    display: none; /* Hidden by default */
+}
+
+.button.processing .icon-default {
+    display: none;
+}
+
+.button.processing .icon-processing {
+    display: block;
+}
+
+/* Processing state styles */
+.button.processing {
+    /* Animated gradient swipe effect */
+    background: linear-gradient(
+        135deg,
+        rgba(8, 118, 245, 0.24) 0%,
+        rgba(213, 173, 253, 0.35) 25%,
+        rgba(8, 118, 245, 0.5) 50%,
+        rgba(213, 173, 253, 0.35) 75%,
+        rgba(8, 118, 245, 0.24) 100%
+    );
+    background-size: 200% 100%;
+    animation: gradientSwipe 2s linear infinite;
+
+    /* Disable transition during processing */
+    transition: none;
+}
+
+/* Ensure no hover effects during processing */
+.button.processing:hover {
+    background: linear-gradient(
+        135deg,
+        rgba(8, 118, 245, 0.24) 0%,
+        rgba(213, 173, 253, 0.35) 25%,
+        rgba(8, 118, 245, 0.5) 50%,
+        rgba(213, 173, 253, 0.35) 75%,
+        rgba(8, 118, 245, 0.24) 100%
+    );
+    background-size: 200% 100%;
+    color: inherit;
+    border-color: #a5b3cd;
+}
+
+/* Keep SVG colors normal during processing hover */
+.button.processing:hover .icon-processing path {
+    fill:#4A526B;
+    stroke: none;
+}
+
+.button.processing:hover .icon-processing circle {
+    stroke: #4A526B;
+    fill: none;
+}
+
+/* Prevent any filter effects on SVG during processing */
+.button.processing:hover .icon-processing {
+    filter: none;
+}

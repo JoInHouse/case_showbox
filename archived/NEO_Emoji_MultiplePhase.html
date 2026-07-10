@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Phase Path Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #060818;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            gap: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2CE1B3;
+            border: none;
+            color: #060818;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+        
+        button:hover {
+            background: #1fa894;
+        }
+        
+        /* The viewport is now the SVG itself, centered with a viewBox */
+        .viewport-svg {
+            width: 48px;
+            height: 48px;
+            overflow: hidden;
+            border: 1px solid rgba(44, 225, 179, 0.3); 
+        }
+        
+        .particle-path {
+            stroke: #2CE1B3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 2px;
+            fill: none;
+            vector-effect: non-scaling-stroke;
+        }
+
+    </style>
+    <!-- GSAP Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+    <!-- MorphSVGPlugin (required for 'd' attribute morphing) -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/MorphSVGPlugin.min.js"></script>
+
+</head>
+<body>
+    <div class="controls">
+        <button id="phase1Btn">Phase 1 (Wave)</button>
+        <button id="phase2Btn">Phase 2 (Circles)</button>
+        <button id="phase3Btn">Phase 3 (Stars)</button>
+    </div>
+    
+    <svg class="viewport-svg" viewBox="-24 -24 48 48" fill="none">
+        <g id="scroll-group">
+            <g id="particle1">
+                <path id="path1" class="particle-path" d=""></path>
+            </g>
+            <g id="particle2">
+                <path id="path2" class="particle-path" d=""></path>
+            </g>
+            <g id="particle3">
+                <path id="path3" class="particle-path" d=""></path>
+            </g>
+        </g>
+    </svg>
+
+    <script>
+        gsap.registerPlugin(MorphSVGPlugin);
+        
+        let currentAnimation; 
+        
+        // --- PATH DEFINITIONS (ALL CENTERED AT 0,0) ---
+
+        // Phase 1: Wave Segment, 25 units wide (x=-12.5 to 12.5), 6 units high (y=-3 to 3)
+        const waveSegmentPath= "M-12.5 0 C-11.6774 0 -10.8226 -3 -8.68447 -3 C-6.54632 -3 -6.05289 -1.42105 -5.39499 0 C-4.7371 1.42105 -4.07921 3 -2.26999 3 C-0.460778 3 0.458316 1.42105 0.854983 0 C1.25165 -1.42105 2.00632 -3 3.81553 -3 C5.62474 -3 6.44711 -1.42105 7.105 0 C7.7629 1.42105 8.42079 3 10.23 3 C12.0392 3 12.697 1.42105 12.5 0";
+
+
+        // Phase 2: Circle Paths (all centered at 0,0)
+        const circle1Path = "M20 0 A 20 20 0 1 1 -20 0 A 20 20 0 1 1 20 0"; // R=20, 99.9% full
+        const circle2Path = "M15 0 A 15 15 0 1 1 -7.5 -12.99"; // R=15, 80% arc
+        const circle3Path = "M10 0 A 10 10 0 1 1 -5 -8.66"; // R=10, 80% arc
+        
+        // Phase 3: Star Paths (4-pointed, centered at 0,0)
+        const star1Path = "M0 -20 L 5 -5 L 20 0 L 5 5 L 0 20 L -5 5 L -20 0 L -5 -5 Z"; // R=20
+        const star2Path = "M0 -15 L 3.75 -3.75 L 15 0 L 3.75 3.75 L 0 15 L -3.75 3.75 L -15 0 L -3.75 -3.75 Z"; // R=15
+        const star3Path = "M0 -10 L 2.5 -2.5 L 10 0 L 2.5 2.5 L 0 10 L -2.5 2.5 L -10 0 L -2.5 -2.5 Z"; // R=10
+
+        // Helper to kill old animations
+        function killOldAnimation() {
+            if (currentAnimation) {
+                currentAnimation.kill();
+                currentAnimation = null;
+            }
+            gsap.killTweensOf("#scroll-group, #particle1, #particle2, #particle3, #path1, #path2, #path3");
+            gsap.set("#particle1, #particle2, #particle3", { rotation: 0 });
+            gsap.set(".particle-path", { strokeDasharray: "none" });
+        }
+
+        // --- ANIMATION FUNCTIONS ---
+
+        function startPhase1() {
+            killOldAnimation();
+            
+            const segmentWidth = 25;
+            currentAnimation = gsap.timeline();
+            currentAnimation.to("#particle1","#particle2","#particle3", {
+                x:(i) =>(i-1)*segmentWidth,
+                y:0,
+                rotation:0,
+                scale:1,
+                duration:0.6,
+                ease:"back.out(1.2)"
+                },0);
+            currentAnimation.to("#path1,#path2,#path3",{
+                attr:{d:waveSegmentPath},
+                strokeDasharray:"none",
+                duration:0.6
+            },0);
+
+            currentAnimation = gsap.fromTo("#scroll-group", 
+                {x:0,},
+                {x:-segmentWidth,duration: 1,ease: "linear",repeat: -1},
+                0,6);
+        }
+        
+        function startPhase2() {
+            killOldAnimation();
+
+            currentAnimation = gsap.timeline();
+            gsap.set("#scroll-group",{x:0});
+            
+            // 2. Center all particle groups
+            currentAnimation.to("#particle1, #particle2, #particle3", {
+                x:0,
+                y:0,
+                scale:1,
+                rotation:(i) => i * 45,
+                duration:0.8,
+                ease:"power3.Out",
+                stagger:0.05
+            }, 0);
+            
+            // 3. Morph shapes
+            currentAnimation.to("#path1", { attr: { d: circle1Path }, strokeDasharray: "2 3", duration:0.8}, 0);
+            currentAnimation.to("#path2", { attr: { d: circle2Path },duration:0.8}, 0);
+            currentAnimation.to("#path3", { attr: { d: circle3Path },duration:0.8}, 0);
+            //Add Rotation
+            currentAnimation.to("#particle2", { rotation: 360, duration: 8, ease: "none", repeat: -1 }, "-=0.4");
+            currentAnimation.to("#particle2", { rotation: 360, duration: 2, ease: "none", repeat: -1 }, "<");
+            currentAnimation.to("#particle3", { rotation: -360, duration: 2, ease: "none", repeat: -1 }, "<");
+        }
+        
+        function startPhase3() {
+            killOldAnimation();
+            
+            currentAnimation = gsap.timeline();
+
+            // 1. Stop scroll and center scroll group
+            gsap.set("#scroll-group", { x: 0 });
+            
+            // 2. Center all particle groups
+            currentAnimation.set("#particle1, #particle2, #particle3", {
+                x:0,
+                y:0,
+                scale:0,
+                opacity:0,
+                rotation:0,
+            }, 0);
+            
+            // 3. Morph shapes to stars
+            currentAnimation.set("#path1", { attr: { d: star1Path }, strokeDasharray: "none" }, 0);
+            currentAnimation.set("#path2", { attr: { d: star2Path }, strokeDasharray: "none" }, 0);
+            currentAnimation.set("#path3", { attr: { d: star3Path }, strokeDasharray: "none" }, 0);
+
+            // 4. Add different rotations
+            currentAnimation.to("#particle1", { 
+                x:16,y:-16, 
+                duration: 0.8,
+                opacity:1,
+                scale:1, 
+                rotation:90,
+                ease: "back.out(3)", 
+            }, 0);
+            currentAnimation.to("#particle2", { 
+                x:-16,y:16, 
+                duration: 0.9,
+                opacity:1,
+                scale:0.8, 
+                rotation:-90,
+                ease: "back.out(3)", 
+            }, 0.1);
+            currentAnimation.to("#particle3", { 
+                x:12,y:10, 
+                duration: 1,
+                opacity:1,
+                scale:0.6, 
+                rotation:180,
+                ease: "back.out(3)", 
+            }, 0.05);
+            
+            // 5. AMBIENT LOOP (Twinkle)
+            currentAnimation.to("#particle1, #particle2, #particle3", {
+                rotation: "+=360", // Continue rotating forever
+                duration: 12,
+                ease: "none",
+                repeat: -1
+            }, 1);
+
+        }
+
+        // Button click handlers
+        document.getElementById("phase1Btn").addEventListener("click", startPhase1);
+        document.getElementById("phase2Btn").addEventListener("click", startPhase2);
+        document.getElementById("phase3Btn").addEventListener("click", startPhase3);
+        
+        // Start with Phase 1
+        startPhase1();
+
+    </script>    
+</body>
+</html>

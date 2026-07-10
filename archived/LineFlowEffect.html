@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPU-Optimized Multi-Path Animation</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: #050510;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  svg {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 238, 0.3));
+  }
+
+  .path-reference {
+    stroke: #006aff;
+    stroke-width: 1;
+    fill: none;
+    opacity: 0.3;
+    stroke-dasharray: 2 4;
+  }
+
+  .gradient-segment {
+    stroke-width: 6;
+    stroke-linecap: round;
+    filter: blur(0.5px);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+
+  @keyframes pulse {
+    0%, 100% { r: 8; opacity: 0.8; }
+    50% { r: 20; opacity: 0; }
+  }
+  
+  .origin-pulse {
+    animation: pulse 2s infinite;
+  }
+</style>
+</head>
+<body>
+<svg width="700" height="750" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="segmentGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ffee" stop-opacity="0" />
+      <stop offset="20%" stop-color="#00ffee" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="80%" stop-color="#ff0066" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#ff0066" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Paths -->
+    <path id="path1" d="M650 367 L541.719 367 C362.719 367 362.719 197 362.719 107 L362.719 0" />
+    <path id="path2" d="M650 367 L541.719 367 C362.719 367 362.719 537 362.719 627 L362.719 750" />
+    <path id="path3" d="M650 367 L541.719 367 C341.318 367 282.739 204 272.719 122 L272.719 0" />
+    <path id="path4" d="M650 367 L541.719 367 C341.318 367 282.739 530 272.719 612 L272.719 750" />
+    <path id="path5" d="M650 367 L541.719 367 C344.796 367 243.107 256 198.719 170 L198.719 0" />
+    <path id="path6" d="M650 367 L541.719 367 C344.796 367 243.107 478 198.719 564 L198.719 750" />
+    <path id="path7" d="M650 367 L541.719 367 C367.339 367 211.967 301 141.719 239 L141.719 0" />
+    <path id="path8" d="M650 367 L541.719 367 C367.339 367 211.967 433 141.719 495 L141.719 750" />
+    <path id="path9" d="M650 367 L541.719 367 C351.644 367 182.289 345.859 105.719 326 L0 326" />
+    <path id="path10" d="M650 367 L541.719 367 C351.644 367 182.289 388.141 105.719 408 L0 408" />
+  </defs>
+
+  <g id="referencePaths"></g>
+
+  <!-- Origin -->
+  <circle cx="541.719" cy="367" r="8" fill="#ff0066" opacity="0.8" />
+  <text x="541.719" y="357" font-family="Arial" font-size="12" fill="#ff0066" text-anchor="middle">Origin</text>
+  <circle cx="541.719" cy="367" r="10" fill="none" stroke="#ff0066" stroke-width="2" class="origin-pulse" />
+
+  <g id="animatedSegments"></g>
+</svg>
+
+<script>
+const paths = Array.from(document.querySelectorAll('defs path'));
+const refContainer = document.getElementById('referencePaths');
+const segmentContainer = document.getElementById('animatedSegments');
+
+// Create reference paths
+const refFragment = document.createDocumentFragment();
+paths.forEach(p => {
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', p.getAttribute('d').replace(/^M650/, 'M541.719'));
+  path.setAttribute('class', 'path-reference');
+  refFragment.appendChild(path);
+});
+refContainer.appendChild(refFragment);
+
+// Config
+const segmentsPerPath = 4;
+const speed = 0.5; // Adjust speed multiplier
+
+// Create segments as <line> elements
+const movingSegments = [];
+paths.forEach((path, i) => {
+  const pathLength = path.getTotalLength();
+  for (let j = 0; j < segmentsPerPath; j++) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', -30);
+    line.setAttribute('y1', 0);
+    line.setAttribute('x2', 30);
+    line.setAttribute('y2', 0);
+    line.setAttribute('stroke', 'url(#segmentGradient)');
+    line.setAttribute('class', 'gradient-segment');
+    line.style.opacity = 0;
+
+    segmentContainer.appendChild(line);
+    movingSegments.push({
+      el: line,
+      path,
+      pathLength,
+      offset: j * 0.25, // staggered start
+    });
+  }
+});
+
+// GPU-friendly animation
+function animate() {
+  const time = performance.now() / 1000;
+
+  movingSegments.forEach(seg => {
+    const t = (time * speed + seg.offset) % 1; 
+    const lengthPos = t * seg.pathLength;
+    const point = seg.path.getPointAtLength(lengthPos);
+    const next = seg.path.getPointAtLength(Math.min(lengthPos + 1, seg.pathLength));
+    const angle = Math.atan2(next.y - point.y, next.x - point.x) * 180 / Math.PI;
+
+    seg.el.setAttribute('transform', `translate(${point.x},${point.y}) rotate(${angle})`);
+    seg.el.style.opacity = t > 0.1 && t < 0.9 ? 1 : 0;
+  });
+
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>

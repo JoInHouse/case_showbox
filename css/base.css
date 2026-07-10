@@ -1,0 +1,113 @@
+/* ============================================================
+   DevAI NEO — Base
+   Global resets + semantic element defaults. Consumes tokens
+   from tokens.css — load tokens.css first.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
+  color: var(--neo-fg-1);
+  background: var(--neo-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11"; /* tabular feel on numbers */
+}
+
+/* ---------- Semantic elements ---------- */
+h1, .neo-h1 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  line-height: var(--lh-tight);
+  color: var(--neo-indigo);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+h2, .neo-h2 {
+  font-weight: 700;
+  font-size: var(--text-xl);
+  line-height: var(--lh-snug);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+h3, .neo-h3 {
+  font-weight: 700;
+  font-size: var(--text-md);
+  line-height: var(--lh-tight);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+h4, .neo-h4 {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  line-height: var(--lh-tight);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+
+p, .neo-body {
+  font-size: var(--text-sm);
+  color: var(--neo-fg-2);
+  line-height: var(--lh-body);
+  margin: 0;
+}
+.neo-body-dense {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-1);
+  line-height: var(--lh-tight);
+}
+
+.neo-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--neo-fg-1);
+  line-height: var(--lh-tight);
+}
+.neo-meta {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-4);
+  line-height: var(--lh-tight);
+}
+.neo-caption {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-3);
+}
+.neo-link-text {
+  color: var(--neo-link);
+  text-decoration: none;
+  cursor: pointer;
+}
+.neo-link-text:hover { text-decoration: underline; }
+
+/* Plain anchors — define explicitly so untouched links never fall
+   back to browser-default blue/purple. */
+a { color: var(--neo-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, kbd, .neo-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--neo-fg-1);
+}
+
+/* ---------- Data-UI primitives (generic, reused across screens) ---------- */
+.neo-card {
+  background: var(--neo-surface);
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+}
+.neo-panel {
+  background: var(--neo-bg);
+  border-radius: var(--radius-md);
+}
+.neo-divider {
+  height: 1px;
+  background: var(--neo-border);
+  border: none;
+}

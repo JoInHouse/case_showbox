@@ -1,0 +1,1289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discrepancy comparison — DevAI NEO</title>
+  <!--
+    DevAI NEO — Discrepancy Agent, source comparison view.
+    Summary (two source KPI cards) + list/detail over matched hosts.
+    Interactive against local mock data: search, filter chips, view
+    switcher, sortable columns, column manager, pagination, detail drawer.
+    Light theme only. No build step — open directly in a browser.
+  -->
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    /* ============================================================
+       Page-scoped styles — only for patterns not already covered by
+       components.css. Tokens only, no new hex/px-off-grid values.
+       ============================================================ */
+    /* Caps the page itself at the viewport — the rail and main panel manage their
+       own internal scrolling, so nothing here should ever add a page-level scrollbar. */
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--neo-app-bg); }
+    .neo-app { padding-top: var(--space-3); }
+
+    /* Sidebar brand + footer (chat-rail specifics).
+       components.css sets `.neo-sidebar { height: fit-content }`; override so the
+       rail fills the screen. Sticky + full viewport height keeps it full-height
+       while the main panel scrolls; the inner list (.cmp-rail__scroll) scrolls
+       internally and the user footer stays pinned to the bottom. */
+    .cmp-rail {
+      padding: var(--space-3) var(--space-2); gap: var(--space-1); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+      align-self: start;
+    }
+    .cmp-rail__brand {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-1) var(--space-2) var(--space-3);
+    }
+    .cmp-rail__brand .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .cmp-rail__brand .txt .t { font-weight: 700; font-size: var(--text-sm); color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .cmp-rail__brand .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); }
+    .cmp-rail__collapse { margin-left: auto; width: 20px; height: 20px; display: grid; place-items: center; cursor: pointer; color: var(--neo-fg-3); border-radius: var(--radius-sm); }
+    .cmp-rail__collapse:hover { background: var(--neo-bg-2); }
+
+    .cmp-newchat {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1);
+      cursor: pointer; margin-bottom: var(--space-1);
+    }
+    .cmp-newchat:hover { background: var(--neo-bg-2); }
+
+    .cmp-rail__section {
+      font-size: var(--text-xs); color: var(--neo-fg-4); font-weight: 600;
+      padding: var(--space-3) var(--space-2) var(--space-1);
+      letter-spacing: .02em;
+    }
+    /* Tighten the gap directly under New chat; other group headings keep full spacing. */
+    .cmp-newchat + .cmp-rail__scroll > .cmp-rail__section:first-child { padding-top: 0; }
+    .cmp-rail__scroll { overflow-y: auto; flex: 1; min-height: 0; margin-right: calc(var(--space-1) * -1); padding-right: var(--space-1); }
+    /* Dense rail: fixed 28px row height, no vertical margin/gap between rows. */
+    .cmp-rail__scroll .neo-sidebar__item { height: 28px; padding: 0 10px; margin: 0; }
+    /* Pin the icon slot: components.css sets `.neo-sidebar__item > span { flex: 1 }`
+       on every child span, so the icon must explicitly opt out of grow/shrink or it
+       eats the row and truncates the label. */
+    .neo-sidebar__item .ic { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; color: currentColor; }
+    .neo-sidebar__item .ic img,
+    .neo-sidebar__item .ic svg { display: block; }
+    .neo-sidebar__item.active .ic { color: #fff; }
+
+    .cmp-rail__foot {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-2) var(--space-1);
+      border-top: 1px solid var(--neo-indigo-100); margin-top: var(--space-2);
+    }
+    .cmp-rail__foot .av {
+      width: 32px; height: 32px; border-radius: var(--radius-pill); flex-shrink: 0;
+      background: var(--neo-indigo); color: #fff; display: grid; place-items: center;
+      font-weight: 700; font-size: var(--text-xs);
+    }
+    .cmp-rail__foot .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .cmp-rail__foot .txt .t { font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .cmp-rail__foot .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cmp-rail__foot .gear { margin-left: auto; color: var(--neo-fg-3); cursor: pointer; display: grid; place-items: center; }
+
+    /* Main panel: pinned to viewport height like the chat rail, so the page itself
+       never scrolls. Everything above the table (header, banner, summary, toolbar,
+       filter bar) is the fixed "cap" and never moves; pagination stays pinned at
+       the bottom too — only the table rows scroll, in their own region between them. */
+    .neo-main {
+      display: flex; flex-direction: column; gap: var(--space-4); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+    }
+    .cmp-panel__fixed { display: flex; flex-direction: column; gap: var(--space-4); flex-shrink: 0; }
+    /* Column headers stay visible while rows scroll underneath them. */
+    .neo-table thead th { position: sticky; top: 0; z-index: 5; }
+
+    /* Comparison header row */
+    .cmp-head {
+      display: flex; align-items: center; gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .cmp-back {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      padding: var(--space-1) var(--space-3); height: 30px;
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-xs); color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .cmp-back:hover { background: var(--neo-bg-2); }
+    .cmp-head__label { font-size: var(--text-xs); color: var(--neo-fg-1); }
+    .cmp-compare { display: inline-flex; align-items: center; gap: var(--space-2); }
+    .cmp-swap {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      color: var(--neo-link); font-size: var(--text-xs); cursor: pointer;
+      border: none; background: transparent; padding: 2px 4px;
+    }
+    .cmp-swap:hover { text-decoration: underline; }
+    .cmp-head__spacer { flex: 1; }
+    .cmp-arrow { color: var(--neo-fg-4); display: grid; place-items: center; }
+    /* Freshness toggle: give it a defined border + more generous hit area so it
+       reads as its own 2-choice control, not a loose label floating in the corner. */
+    #dataFreshness { border: 1px solid var(--neo-indigo-100); padding: 3px; }
+    #dataFreshness button { padding: 6px 12px; }
+    /* Live icon rides on currentColor (muted while idle); once selected it lights up
+       in the same green used for "installed/active" status elsewhere, so the pill
+       itself reads as "on air" instead of just another equally-weighted toggle state. */
+    #dataFreshness .live-ic { color: var(--neo-fg-3); transition: color 150ms ease; }
+    #dataFreshness button[data-fresh="live"].active .live-ic { color: var(--neo-success-2); }
+
+    /* "Data for this view" info balloon — hover/focus reveal, no JS required. */
+    .cmp-info-tip { position: relative; display: inline-flex; cursor: help; outline: none; }
+    .cmp-info-tip__balloon {
+      position: absolute; z-index: 60; top: calc(100% + 10px); left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      width: 380px; padding: var(--space-4);
+      display: flex; flex-direction: column; gap: var(--space-2);
+      background: var(--neo-bg); border: 1px solid var(--neo-indigo-100);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+    .cmp-info-tip__balloon::before {
+      content: ''; position: absolute; top: -5px; left: 50%;
+      width: 9px; height: 9px; transform: translateX(-50%) rotate(45deg);
+      background: var(--neo-bg); border-left: 1px solid var(--neo-indigo-100);
+      border-top: 1px solid var(--neo-indigo-100);
+    }
+    .cmp-info-tip:hover .cmp-info-tip__balloon,
+    .cmp-info-tip:focus-visible .cmp-info-tip__balloon {
+      opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0);
+    }
+    .cmp-info-tip__row { display: flex; flex-direction: column; gap: var(--space-1); text-align: left; white-space: normal; }
+    .cmp-info-tip__row .t { font-size: var(--text-sm); font-weight: 700; color: var(--neo-fg-1); line-height: var(--lh-snug); }
+    .cmp-info-tip__row .d { font-size: var(--text-xs); color: var(--neo-fg-2); line-height: var(--lh-body); }
+
+    /* Info banner */
+    .cmp-banner {
+      display: flex; align-items: center; gap: var(--space-2);
+      height: 24px; padding: 0 var(--space-3);
+      background: var(--neo-indigo-light-100); border-radius: var(--radius-sm);
+      font-size: var(--text-xs); color: var(--neo-fg-1);
+      transition: background-color 200ms ease;
+    }
+    .cmp-banner svg { color: var(--neo-indigo); flex-shrink: 0; }
+    .cmp-banner__icon { display: inline-flex; flex-shrink: 0; }
+    .cmp-banner__icon svg { display: block; }
+    .cmp-banner__text { flex: 0 1 auto; }
+    .cmp-banner__link {
+      flex-shrink: 0; color: var(--neo-link); font-size: var(--text-xs); font-weight: 600;
+      background: none; border: none; padding: 0; cursor: pointer;
+    }
+    .cmp-banner__link:hover { text-decoration: underline; }
+    /* Live refresh: spinning ring while in flight, filled check once the simulated pull lands. */
+    @keyframes cmp-spin { to { transform: rotate(360deg); } }
+    .cmp-spinner { color: var(--neo-indigo); animation: cmp-spin 0.85s linear infinite; transform-origin: center; }
+    .cmp-banner__icon .chk-bg { fill: var(--neo-success-2); }
+    .cmp-banner.success {
+      background: #E9FDF3; color: var(--neo-fg-1);
+    }
+
+    /* Summary cards */
+    .cmp-summary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+    .cmp-scard { padding: var(--space-4) var(--space-5); }
+    .cmp-scard__head {
+      display: flex; align-items: center; gap: var(--space-2);
+      font-size: var(--text-sm); font-weight: 700; color: var(--neo-fg-1);
+      margin-bottom: var(--space-3);
+    }
+    .cmp-scard__head img { width: 18px; height: 18px; }
+    .cmp-scard__total { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-3); }
+    .cmp-scard__total .n { font-size: var(--text-3xl); font-weight: 700; color: var(--neo-fg-1); line-height: var(--lh-tight); letter-spacing: -0.02em; }
+    .cmp-scard__total .u { font-size: var(--text-xs); color: var(--neo-fg-3); }
+
+    .cmp-scard__filters {
+      display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+      padding-bottom: var(--space-3); margin-bottom: var(--space-3);
+      border-bottom: 1px solid var(--neo-border);
+      font-size: var(--text-xs); color: var(--neo-fg-2);
+    }
+    .cmp-scard__filters .fchip {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+    }
+    .cmp-scard__filters .k { color: var(--neo-fg-3); }
+    .cmp-scard__filters .v { color: var(--neo-fg-1); font-weight: 600; }
+    .cmp-scard__filters .more { color: var(--neo-indigo); font-weight: 600; }
+    .cmp-scard__filters .edit { margin-left: auto; color: var(--neo-link); cursor: pointer; }
+    .cmp-scard__filters .edit:hover { text-decoration: underline; }
+
+    .cmp-stat {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 2px var(--space-2); border-radius: var(--radius-sm);
+      font-size: var(--text-xs); color: var(--neo-fg-1); cursor: pointer;
+    }
+    .cmp-stat:hover { background: var(--neo-bg-2); }
+    .cmp-stat.is-active { background: var(--neo-indigo-50); color: var(--neo-fg-1); }
+    .cmp-stat .val { display: inline-flex; align-items: center; gap: var(--space-1); font-weight: 700; color: var(--neo-fg-1); }
+    .cmp-stat .bang { color: var(--neo-danger); font-weight: 700; }
+    /* Values flagged with "!" (not-in-Dynatrace / discrepancy counts) get a soft-pink
+       pill just around the number itself — same "something's off" pink used for
+       mismatched table rows elsewhere, scoped to the hot data instead of the full row. */
+    .cmp-stat.has-flag .val {
+      color: var(--neo-danger); font-style: italic;
+      background: var(--neo-pink-2); border-radius: var(--radius-pill);
+      padding: 1px var(--space-2);
+    }
+    .cmp-stat.has-flag:hover .val { background: var(--neo-pink); }
+
+    /* View switcher + right actions row already uses .neo-toolbar */
+    /* Primary command bar: taller controls set it apart from the secondary condition row below. */
+    .cmp-toolbar-primary .cmp-viewsel,
+    .cmp-toolbar-primary .cmp-ghostbtn { height: 36px; }
+
+    .cmp-viewsel {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      height: 30px; padding: 0 var(--space-2) 0 var(--space-3);
+      border: 1px solid var(--neo-indigo-hair); border-radius: var(--radius-sm);
+      background: var(--neo-indigo-50); cursor: pointer;
+      font-size: var(--text-xs); color: var(--neo-fg-1); position: relative;
+    }
+    .cmp-viewsel .v { font-weight: 700; }
+    .cmp-viewsel .cnt { color: var(--neo-indigo); font-weight: 700; }
+
+    .cmp-ghostbtn {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      height: 30px; padding: 0 var(--space-3);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-xs); color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .cmp-ghostbtn:hover { background: var(--neo-bg-2); }
+    .cmp-ghostbtn svg { color: var(--neo-fg-2); }
+
+    /* Dropdown popovers (view / columns / add-filter / page-size) */
+    .cmp-pop {
+      position: absolute; z-index: 40; top: calc(100% + var(--space-1)); left: 0;
+      min-width: 200px; background: var(--neo-surface);
+      border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-3); padding: var(--space-2);
+    }
+    .cmp-pop.right { left: auto; right: 0; }
+    .cmp-pop__item {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-2); border-radius: var(--radius-sm);
+      font-size: var(--text-xs); color: var(--neo-fg-1); cursor: pointer;
+      white-space: nowrap;
+    }
+    .cmp-pop__item:hover { background: var(--neo-bg-2); }
+    .cmp-pop__item .cnt { margin-left: auto; color: var(--neo-fg-3); }
+    .cmp-pop__item input { accent-color: var(--neo-indigo); }
+    .cmp-pop__sep { height: 1px; background: var(--neo-border); margin: var(--space-1) 0; }
+
+    /* Filter chip bar */
+    .cmp-filterbar {
+      display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+      background: var(--neo-bg);
+      border-radius: var(--radius-md); padding: var(--space-2) var(--space-3);
+    }
+    .cmp-addfilter {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      height: 26px; padding: 0 var(--space-2);
+      border: 1px dashed var(--neo-indigo); border-radius: var(--radius-pill);
+      background: var(--neo-surface); font-size: var(--text-xs); color: var(--neo-fg-2);
+      cursor: pointer; position: relative;
+    }
+    .cmp-addfilter:hover { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .cmp-chip {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      height: 26px; padding: 0 var(--space-1) 0 var(--space-2);
+      background: var(--neo-surface); border: 1px solid var(--neo-indigo-hair);
+      border-radius: var(--radius-pill); font-size: var(--text-xs); color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .cmp-chip:hover { background: var(--neo-bg-2); }
+    .cmp-chip .k { color: var(--neo-fg-3); }
+    .cmp-chip .v { font-weight: 600; }
+    .cmp-chip .more {
+      color: var(--neo-indigo); font-weight: 600;
+      background: var(--neo-indigo-50); border-radius: var(--radius-pill);
+      padding: 1px 6px;
+    }
+    .cmp-chip .x {
+      display: grid; place-items: center; width: 16px; height: 16px;
+      border-radius: var(--radius-pill); color: var(--neo-fg-3); cursor: pointer;
+    }
+    .cmp-chip .x:hover { background: var(--neo-indigo-100); color: var(--neo-fg-1); }
+    .cmp-linkbtn { border: none; background: transparent; color: var(--neo-link); font-size: var(--text-xs); cursor: pointer; padding: 2px 4px; }
+    .cmp-linkbtn:hover { text-decoration: underline; }
+    .cmp-linkbtn.mute { color: var(--neo-fg-3); }
+
+    /* Table shell — this is the element that actually scrolls (flex:1 fills the
+       space left over by the fixed cap above and the pinned pagination below);
+       sticky <th> below sticks relative to *this* box, since it's the real
+       scrolling ancestor, not a wrapper further out. */
+    .cmp-tablewrap {
+      border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md);
+      overflow-y: auto; flex: 1; min-height: 0;
+    }
+    /* border-collapse:collapse (components.css default) silently breaks position:sticky
+       on <th> in every major browser — separate + zero spacing keeps the same look
+       (only border-bottom is set, so no double-border seams appear) and lets it stick. */
+    .neo-table { border-collapse: separate; border-spacing: 0; }
+    /* Tie the header to the same brand tint as the condition row above it. */
+    .neo-table th { background: var(--neo-indigo-50); color: var(--neo-fg-1); }
+    .neo-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    .neo-table th.sortable:hover { color: var(--neo-fg-1); }
+    .neo-table th .sort-ind { margin-left: var(--space-1); color: var(--neo-fg-4); font-size: 10px; }
+    .neo-table th.sorted .sort-ind { color: var(--neo-indigo); }
+    .neo-table td.mono { font-family: var(--font-sans); }
+    .neo-table td.action a { color: var(--neo-link); cursor: pointer; font-size: var(--text-xs); }
+    .neo-table td.action a:hover { text-decoration: underline; }
+    .cmp-statusdot { display: inline-flex; align-items: center; gap: var(--space-1); }
+    .cmp-statusdot i { width: 6px; height: 6px; border-radius: var(--radius-pill); display: inline-block; }
+    .cmp-statusdot.installed i { background: var(--neo-success-2); }
+    .cmp-statusdot.retired i { background: var(--neo-fg-4); }
+    .cmp-statusdot.maint i { background: var(--neo-warning); }
+    .cmp-flag { color: var(--neo-danger); font-weight: 700; margin-left: var(--space-1); }
+
+    .cmp-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--space-3); padding: var(--space-12) var(--space-4);
+      text-align: center; color: var(--neo-fg-3);
+    }
+    .cmp-empty img { width: 72px; height: 72px; opacity: .8; }
+    .cmp-empty .t { font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-2); }
+    .cmp-empty .s { font-size: var(--text-xs); }
+
+    /* Pagination — pinned below the scrolling table, never scrolls out of view. */
+    .cmp-pagination {
+      display: flex; align-items: center; justify-content: center; gap: var(--space-1);
+      padding-top: var(--space-2); flex-shrink: 0;
+    }
+    .cmp-pagination .pbtn {
+      min-width: 28px; height: 28px; padding: 0 var(--space-2);
+      border: 1px solid var(--neo-border); border-radius: var(--radius-sm);
+      background: var(--neo-surface); color: var(--neo-fg-2); font-size: var(--text-xs);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1);
+    }
+    .cmp-pagination .pbtn:hover:not(:disabled) { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .cmp-pagination .pbtn.active { background: var(--neo-indigo); border-color: var(--neo-indigo); color: #fff; font-weight: 700; }
+    .cmp-pagination .pbtn:disabled { opacity: .45; cursor: default; }
+    .cmp-pagination .pell { color: var(--neo-fg-4); padding: 0 var(--space-1); }
+    .cmp-pagination .pnav { padding: 0 var(--space-3); }
+
+    /* Detail drawer */
+    .cmp-scrim {
+      position: fixed; inset: 0; background: rgba(6, 0, 26, 0.28);
+      opacity: 0; pointer-events: none; transition: opacity 200ms ease;
+      z-index: 90;
+    }
+    .cmp-scrim.open { opacity: 1; pointer-events: auto; }
+    .cmp-drawer {
+      position: fixed; top: 0; right: 0; height: 100vh; width: 420px; max-width: 92vw;
+      background: var(--neo-surface); box-shadow: var(--shadow-3);
+      transform: translateX(100%); transition: transform 200ms ease;
+      z-index: 100; display: flex; flex-direction: column;
+    }
+    .cmp-drawer.open { transform: translateX(0); }
+    .cmp-drawer__head {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--neo-border);
+    }
+    .cmp-drawer__head .t { font-size: var(--text-md); font-weight: 700; color: var(--neo-fg-1); font-family: var(--font-mono); }
+    .cmp-drawer__close { margin-left: auto; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--neo-fg-3); cursor: pointer; border: none; background: transparent; }
+    .cmp-drawer__close:hover { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .cmp-drawer__body { flex: 1; overflow-y: auto; padding: var(--space-4) var(--space-5); }
+    .cmp-drawer__srchead {
+      display: grid; grid-template-columns: 1fr 96px 96px; gap: var(--space-2);
+      padding: var(--space-2) 0; border-bottom: 1px solid var(--neo-border);
+      font-size: var(--text-xs); color: var(--neo-fg-3); font-weight: 600;
+    }
+    .cmp-drawer__srchead .src { display: inline-flex; align-items: center; gap: var(--space-1); justify-content: flex-end; }
+    .cmp-drawer__srchead img { width: 14px; height: 14px; }
+    .cmp-drow {
+      display: grid; grid-template-columns: 1fr 96px 96px; gap: var(--space-2);
+      align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--neo-border);
+      font-size: var(--text-xs);
+    }
+    .cmp-drow .attr { color: var(--neo-fg-3); }
+    .cmp-drow .cell { text-align: right; color: var(--neo-fg-1); font-weight: 600; }
+    .cmp-drow.mismatch .cell { color: var(--neo-fg-1); }
+    .cmp-drow.mismatch { background: var(--neo-pink-2); border-radius: var(--radius-sm); }
+    .cmp-drawer__foot { padding: var(--space-4) var(--space-5); border-top: 1px solid var(--neo-border); display: flex; gap: var(--space-2); }
+
+    @media (max-width: 980px) {
+      .cmp-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="neo-app">
+  <div class="neo-body">
+
+    <!-- ============ Left rail (Discrepancy Agent context) ============ -->
+    <aside class="neo-sidebar cmp-rail">
+      <div class="cmp-rail__brand">
+        <span class="neo-topbar__avatar" style="width:40px;height:40px;border-radius:var(--radius-lg);">
+          <img src="../img/NEO_Avatar.png" alt="">
+        </span>
+        <span class="txt">
+          <span class="t">DevAI NEO</span>
+          <span class="s">Network Intelligence Engine</span>
+        </span>
+        <span class="cmp-rail__collapse" title="Collapse rail" aria-label="Collapse rail">
+          <img src="../img/Objects/LeftSidePanel.svg" width="14" height="14" alt="">
+        </span>
+      </div>
+
+      <div class="cmp-newchat">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        New chat
+      </div>
+
+      <div class="cmp-rail__scroll">
+        <div class="cmp-rail__section">Agents</div>
+        <div class="neo-sidebar__item" data-nav="discovery"><span class="ic">
+          <img src="../img/Objects/SpotlightSearch_03.svg" width="16" height="16" alt="">
+        </span><span>Discovery Agent</span></div>
+        <div class="neo-sidebar__item active" data-nav="discrepancy"><span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M3 8h10M3 11h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span><span>Discrepancy Agent</span></div>
+        <div class="neo-sidebar__item" data-nav="location"><span class="ic">
+          <img src="../img/Objects/Location.svg" width="16" height="16" alt="">
+        </span><span>Location View</span></div>
+
+        <div class="cmp-rail__section">Insights</div>
+        <div class="neo-sidebar__item" data-nav="i1"><span class="ic">
+          <img src="../img/Objects/IncidentCheck.svg" width="16" height="16" alt="">
+        </span><span>Incident insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i2"><span class="ic">
+          <img src="../img/Objects/IP_Device.svg" width="16" height="16" alt="">
+        </span><span>IP &amp; device insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i3"><span class="ic">
+          <img src="../img/Objects/Server.svg" width="16" height="16" alt="">
+        </span><span>Server &amp; application</span></div>
+        <div class="neo-sidebar__item" data-nav="i4"><span class="ic"><img src="../img/Sys/Jira_Outline.svg" width="16" height="16" alt=""></span><span>Jira Issue</span></div>
+        <div class="neo-sidebar__item" data-nav="i5"><span class="ic"><img src="../img/Sys/Zabbix_14x14_outline.svg" width="16" height="16" alt=""></span><span>Zabbix problems</span></div>
+        <div class="neo-sidebar__item" data-nav="i6"><span class="ic">
+          <img src="../img/Objects/IPAddressPlanning.svg" width="16" height="16" alt="">
+        </span><span>IP Planning</span></div>
+
+        <div class="cmp-rail__section">Working Topics</div>
+        <div class="neo-sidebar__item" data-nav="t1"><span>General knowledge</span></div>
+        <div class="neo-sidebar__item" data-nav="t2"><span>Outage incident</span></div>
+        <div class="neo-sidebar__item" data-nav="t3"><span>Planning &amp; architecture</span></div>
+        <div class="neo-sidebar__item" data-nav="t4"><span>Compliance review</span></div>
+
+        <div class="cmp-rail__section">Recent Chats</div>
+        <div class="neo-sidebar__item" data-nav="c1"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>IP address' inquiry of 10.11.128.3</span></div>
+        <div class="neo-sidebar__item" data-nav="c2"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Device check on Location JFK08</span></div>
+        <div class="neo-sidebar__item" data-nav="c3"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Workflow review on discrepancies</span></div>
+      </div>
+
+      <div class="cmp-rail__foot">
+        <span class="av">JZ</span>
+        <span class="txt">
+          <span class="t">Josephzou</span>
+          <span class="s">josephzou@dev_ai.com</span>
+        </span>
+        <span class="gear" title="Settings"><img src="../img/Controls/Settings.svg" width="16" height="16" alt="Settings"></span>
+      </div>
+    </aside>
+
+    <!-- ============ Main panel ============ -->
+    <main class="neo-main">
+     <div class="cmp-panel__fixed">
+
+      <!-- Header row -->
+      <div class="cmp-head">
+        <button class="cmp-back" id="backBtn">
+          <img src="../img/Controls/ArrowwithTail.svg" width="14" height="14" style="transform:scaleX(-1);" alt="">
+          Back
+        </button>
+        <span class="cmp-head__label">In Comparison:</span>
+        <span class="cmp-compare" id="compareChips">
+          <span class="neo-source-chip"><img src="../img/Sys/SN.svg" alt="">ServiceNow</span>
+          <span class="cmp-arrow"><img src="../img/Controls/DoubleLink.svg" width="14" height="14" alt=""></span>
+          <span class="neo-source-chip"><img src="../img/Sys/VMW.svg" alt="">VMware vROps</span>
+        </span>
+        <button class="cmp-swap" id="swapBtn">
+          Switch
+          <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+        </button>
+        <span class="cmp-head__label">Data for this view
+          <span class="cmp-info-tip" tabindex="0" aria-label="Data freshness for the loaded comparison" style="vertical-align:-2px;">
+            <img src="../img/Objects/Info.svg" width="14" height="14" alt="">
+            <span class="cmp-info-tip__balloon" role="tooltip">
+              <span class="cmp-info-tip__row">
+                <span class="t">Cached</span>
+                <span class="d">Full analysis and insights are ready instantly, from the last synced pull.</span>
+              </span>
+              <span class="cmp-info-tip__row">
+                <span class="t">Live</span>
+                <span class="d">Realtime data straight from source. Analysis and insights may take a while to catch up.</span>
+              </span>
+            </span>
+          </span>:
+        </span>
+        <div class="neo-toolbar__switch" id="dataFreshness">
+          <button class="active" data-fresh="cached">Cached &middot; 2d</button>
+          <button data-fresh="live">
+            <svg class="live-ic" width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M6.99992 8.99596C8.10337 8.99596 8.9979 8.10143 8.9979 6.99798C8.9979 5.89453 8.10337 5 6.99992 5C5.89647 5 5.00195 5.89453 5.00195 6.99798C5.00195 8.10143 5.89647 8.99596 6.99992 8.99596Z" fill="currentColor"/>
+              <path d="M10 5C10.3403 5.58835 10.5351 6.27143 10.5351 7C10.5351 7.72857 10.3403 8.41165 10 9" stroke="currentColor" stroke-linecap="round"/>
+              <path d="M4.03516 5C3.69482 5.58835 3.50003 6.27143 3.50003 7C3.50003 7.72857 3.69482 8.41165 4.03516 9" stroke="currentColor" stroke-linecap="round"/>
+              <path d="M2 4C1.364 4.88252 1 5.90714 1 7C1 8.09286 1.364 9.11748 2 10" stroke="currentColor" stroke-linecap="round"/>
+              <path d="M12 4C12.636 4.88252 13 5.90714 13 7C13 8.09286 12.636 9.11748 12 10" stroke="currentColor" stroke-linecap="round"/>
+            </svg>
+            Live
+          </button>
+        </div>
+        <span class="cmp-head__spacer"></span>
+      </div>
+
+      <!-- Info banner -->
+      <div class="cmp-banner" id="freshnessBanner">
+        <span class="cmp-banner__icon" id="freshnessIcon"><img src="../img/Objects/Info.svg" width="16" height="16" alt=""></span>
+        <span class="cmp-banner__text" id="freshnessText">Full analysis and insights are ready instantly, from the last synced pull.</span>
+        <button class="cmp-banner__link neo-hidden" id="freshnessLink">Refresh again</button>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="cmp-summary">
+        <!-- ServiceNow -->
+        <div class="neo-card cmp-scard">
+          <div class="cmp-scard__head"><img src="../img/Sys/SN.svg" alt="">ServiceNow</div>
+          <div class="cmp-scard__total"><span class="n">343</span><span class="u">Servers in total</span></div>
+          <div class="cmp-scard__filters">
+            <span class="fchip"><span class="k">Install status:</span><span class="v">Installed</span><span class="more">+4</span></span>
+            <span class="fchip"><span class="k">DNS Domain:</span><span class="v">hr.internal</span><span class="more">+4</span></span>
+            <span class="fchip"><span class="k">Class:</span><span class="v">AIX Server</span><span class="more">+4</span></span>
+            <span class="edit">Edit</span>
+          </div>
+          <div class="cmp-stat" data-view="in-sync">
+            <span>Server in sync (fully matched, no issue):</span>
+            <span class="val">76</span>
+          </div>
+          <div class="cmp-stat has-flag" data-view="not-in-dynatrace">
+            <span>Not in Dynatrace:</span>
+            <span class="val">231 <span class="bang">!</span></span>
+          </div>
+          <div class="cmp-stat has-flag" data-view="discrepancy">
+            <span>In both tool, with discrepancy:</span>
+            <span class="val">36 <span class="bang">!</span></span>
+          </div>
+        </div>
+
+        <!-- VMware vROps -->
+        <div class="neo-card cmp-scard">
+          <div class="cmp-scard__head"><img src="../img/Sys/VMW.svg" alt="">VMware vROps</div>
+          <div class="cmp-scard__total"><span class="n">345</span><span class="u">Servers in total</span></div>
+          <div class="cmp-scard__filters" style="min-height:26px;">
+            <span class="fchip"><span class="k">Scope:</span><span class="v">All clusters</span></span>
+          </div>
+          <div class="cmp-stat" data-view="in-sync">
+            <span>Fully matched:</span>
+            <span class="val">76</span>
+          </div>
+          <div class="cmp-stat has-flag" data-view="in-both">
+            <span>in both tool:</span>
+            <span class="val">233 <span class="bang">!</span></span>
+          </div>
+          <div class="cmp-stat has-flag" data-view="discrepancy">
+            <span>in both tool, with discrepancy:</span>
+            <span class="val">36 <span class="bang">!</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar: view selector + right actions -->
+      <div class="neo-toolbar cmp-toolbar-primary" style="margin-bottom:0;">
+        <span class="cmp-head__label">Select view:</span>
+        <div class="cmp-viewsel" id="viewSelBtn">
+          <span class="v" id="viewSelLabel">Matched hosts</span>
+          <span class="cnt" id="viewSelCount">353</span>
+          <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+          <div class="cmp-pop neo-hidden" id="viewPop"></div>
+        </div>
+
+        <span class="neo-toolbar__spacer"></span>
+
+        <div style="position:relative;">
+          <button class="cmp-ghostbtn" id="columnsBtn">
+            <img src="../img/Objects/ColManagement.svg" width="14" height="14" alt="">
+            Manage columns
+          </button>
+          <div class="cmp-pop right neo-hidden" id="columnsPop"></div>
+        </div>
+
+        <button class="cmp-ghostbtn" id="exportBtn">
+          <img src="../img/Controls/Download-file.svg" width="14" height="14" alt="">
+          Export
+        </button>
+
+        <div style="position:relative;">
+          <button class="cmp-ghostbtn" id="pageSizeBtn">
+            <span id="pageSizeLabel">25/page</span>
+            <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+          </button>
+          <div class="cmp-pop right neo-hidden" id="pageSizePop"></div>
+        </div>
+      </div>
+
+      <!-- Search + filter chip bar -->
+      <div class="cmp-filterbar">
+        <div style="position:relative;">
+          <button class="cmp-addfilter" id="addFilterBtn">
+            <img src="../img/Objects/AddFilter.svg" width="12" height="12" alt="">
+            Add filter
+          </button>
+          <div class="cmp-pop neo-hidden" id="addFilterPop"></div>
+        </div>
+        <div id="chipHost" style="display:flex;gap:var(--space-2);flex-wrap:wrap;"></div>
+        <button class="cmp-linkbtn" id="defaultsBtn">Use default settings</button>
+        <button class="cmp-linkbtn mute" id="clearAllBtn">Clear all</button>
+      </div>
+
+     </div>
+
+      <!-- Table: the one part that actually scrolls; header row stays stuck to its top -->
+      <div class="cmp-tablewrap">
+        <table class="neo-table" id="hostTable">
+          <thead><tr id="headRow"></tr></thead>
+          <tbody id="hostBody"></tbody>
+        </table>
+        <div class="cmp-empty neo-hidden" id="emptyState">
+          <img src="../img/Graphics/emptybox.svg" alt="">
+          <div class="t">No hosts match the current filters</div>
+          <div class="s">Adjust the search term or remove a filter to widen the results.</div>
+        </div>
+      </div>
+
+      <!-- Pagination stays pinned below the scrolling table, always visible -->
+      <div class="cmp-pagination" id="pagination"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Detail drawer -->
+<div class="cmp-scrim" id="scrim"></div>
+<aside class="cmp-drawer" id="drawer" aria-hidden="true">
+  <div class="cmp-drawer__head">
+    <span class="t" id="drawerTitle">host</span>
+    <button class="cmp-drawer__close" id="drawerClose" aria-label="Close detail">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="cmp-drawer__body">
+    <div class="cmp-drawer__srchead">
+      <span>Attribute</span>
+      <span class="src"><img src="../img/Sys/SN.svg" alt="">ServiceNow</span>
+      <span class="src"><img src="../img/Sys/VMW.svg" alt="">vROps</span>
+    </div>
+    <div id="drawerRows"></div>
+  </div>
+  <div class="cmp-drawer__foot">
+    <button class="neo-btn-primary" style="flex:1;" id="drawerReconcile">Reconcile in ServiceNow</button>
+    <button class="cmp-ghostbtn" id="drawerJira">Open Jira issue</button>
+  </div>
+</aside>
+
+<script>
+/* ============================================================
+   Discrepancy comparison — client-side logic over mock data.
+   No backend. Swap MOCK_HOSTS for a real fetch() later.
+   ============================================================ */
+
+// ---------- Mock dataset ----------
+const ROLES = ['arubamobility', 'sdwan', 'switch', 'wireless', 'dist', 'edge', 'leaf', 'spine', 'core', 'firewall'];
+const DNS_DOMAINS = ['hr.internal', 'corp.internal', 'dc-east.internal', 'lab.internal', 'finance.internal'];
+const CLASSES = ['AIX Server', 'Linux Server', 'Windows Server', 'ESXi Host', 'Solaris Server'];
+const OS_VERSIONS = ['7.2 TL5', '8.1 SP2', '20.04 LTS', '2019 STD', 'ESXi 7.0 U3'];
+const LOCATIONS = ['DFW01', 'JFK08', 'LAX03', 'ORD05'];
+const STATUSES = [
+  { key: 'installed', label: 'Installed' },
+  { key: 'maint', label: 'In maintenance' },
+  { key: 'retired', label: 'Retired' }
+];
+
+// Deterministic pseudo-random so the dataset is stable across reloads.
+let _seed = 20260710;
+function rnd() { _seed = (_seed * 1103515245 + 12345) & 0x7fffffff; return _seed / 0x7fffffff; }
+function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+
+// Category budget so counts line up with the summary cards.
+// in-sync: 76, discrepancy: 36, not-in-dynatrace: 231, other: 10  = 353
+function buildCategoryPool() {
+  const pool = [];
+  for (let i = 0; i < 76; i++) pool.push('in-sync');
+  for (let i = 0; i < 36; i++) pool.push('discrepancy');
+  for (let i = 0; i < 231; i++) pool.push('not-in-dynatrace');
+  for (let i = 0; i < 10; i++) pool.push('in-both');
+  // shuffle
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool;
+}
+
+const MOCK_HOSTS = (() => {
+  const cats = buildCategoryPool();
+  const roleCounters = {};
+  return cats.map((cat, idx) => {
+    const role = pick(ROLES);
+    roleCounters[role] = (roleCounters[role] || 0) + 1;
+    const loc = pick(LOCATIONS);
+    const name = `${loc.toLowerCase()}-${role}-${String(roleCounters[role]).padStart(2, '0')}`;
+    const status = cat === 'discrepancy' && rnd() > 0.6 ? STATUSES[1] : pick([STATUSES[0], STATUSES[0], STATUSES[0], STATUSES[1], STATUSES[2]]);
+    const cores = pick([4, 8, 8, 16, 32]);
+    const ram = pick([16, 32, 64, 128, 256]);
+    const cls = pick(CLASSES);
+    const dns = pick(DNS_DOMAINS);
+
+    // Build ServiceNow vs vROps attribute pairs; discrepancy rows have mismatches.
+    const snOs = pick(OS_VERSIONS);
+    const vrCores = cat === 'discrepancy' && rnd() > 0.5 ? cores * 2 : cores;
+    const vrRam = cat === 'discrepancy' && rnd() > 0.5 ? ram / 2 : ram;
+    const vrOs = cat === 'discrepancy' && rnd() > 0.7 ? pick(OS_VERSIONS) : snOs;
+    const inVrops = cat !== 'not-in-dynatrace';
+
+    return {
+      id: idx,
+      name,
+      statusKey: status.key,
+      statusLabel: status.label,
+      cores,
+      ram,
+      cls,
+      dns,
+      location: loc,
+      category: cat,               // in-sync | discrepancy | not-in-dynatrace | in-both
+      installStatus: status.label,
+      compare: {
+        'CPU cores': [cores, inVrops ? vrCores : '—'],
+        'RAM (GB)': [ram, inVrops ? vrRam : '—'],
+        'OS version': [snOs, inVrops ? vrOs : '—'],
+        'DNS domain': [dns, inVrops ? dns : '—'],
+        'Class': [cls, inVrops ? cls : '—'],
+        'Location': [loc, inVrops ? loc : '—']
+      }
+    };
+  });
+})();
+
+// ---------- Column definitions ----------
+const COLUMNS = [
+  { key: 'name',         label: 'Server name',   sortable: true,  visible: true,  type: 'text' },
+  { key: 'statusLabel',  label: 'Device status', sortable: true,  visible: true,  type: 'status' },
+  { key: 'cores',        label: 'CPU cores',     sortable: true,  visible: true,  type: 'num' },
+  { key: 'ram',          label: 'RAM (GB)',      sortable: true,  visible: true,  type: 'num' },
+  { key: 'cls',          label: 'Class',         sortable: true,  visible: true,  type: 'text' },
+  { key: 'dns',          label: 'DNS domain',    sortable: true,  visible: false, type: 'text' },
+  { key: 'location',     label: 'Location',      sortable: true,  visible: false, type: 'text' },
+  { key: '_action',      label: 'Action',        sortable: false, visible: true,  type: 'action' }
+];
+
+// ---------- Views ----------
+const VIEWS = [
+  { key: 'matched',          label: 'Matched hosts',       test: () => true },
+  { key: 'in-sync',          label: 'In sync (no issue)',  test: h => h.category === 'in-sync' },
+  { key: 'discrepancy',      label: 'With discrepancy',    test: h => h.category === 'discrepancy' },
+  { key: 'not-in-dynatrace', label: 'Not in Dynatrace',    test: h => h.category === 'not-in-dynatrace' },
+  { key: 'in-both',          label: 'In both tools',       test: h => h.category !== 'not-in-dynatrace' }
+];
+
+// ---------- Active filters (chips) ----------
+// Each chip is a facet backed by a real multi-select: state.filterValues[defKey] holds
+// every checked option, and the chip shows the first value plus "+N" for the rest.
+const FILTER_DEFS = {
+  installStatus: { label: 'Install status', field: 'installStatus', options: ['Installed', 'In maintenance', 'Retired'] },
+  dns:           { label: 'DNS Domain',     field: 'dns',           options: DNS_DOMAINS },
+  cls:           { label: 'Class',          field: 'cls',           options: CLASSES }
+};
+const DEFAULT_FILTER_ORDER = ['installStatus', 'dns', 'cls'];
+const DEFAULT_FILTER_VALUES = {
+  installStatus: ['Installed', 'In maintenance'],
+  dns:           ['hr.internal', 'corp.internal', 'dc-east.internal', 'lab.internal'],
+  cls:           ['AIX Server', 'Linux Server', 'Windows Server', 'ESXi Host']
+};
+
+// ---------- State ----------
+const state = {
+  view: 'matched',
+  filterOrder: [...DEFAULT_FILTER_ORDER],
+  filterValues: JSON.parse(JSON.stringify(DEFAULT_FILTER_VALUES)),
+  search: '',
+  sortKey: null,
+  sortDir: 1,
+  page: 1,
+  pageSize: 25
+};
+
+// ---------- Helpers ----------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+
+function viewCount(viewKey) {
+  const v = VIEWS.find(v => v.key === viewKey) || VIEWS[0];
+  return MOCK_HOSTS.filter(v.test).length;
+}
+
+// Apply view + filters + search (but NOT sort/paging) → row list
+function filteredRows() {
+  const v = VIEWS.find(v => v.key === state.view) || VIEWS[0];
+  let rows = MOCK_HOSTS.filter(v.test);
+  state.filterOrder.forEach(defKey => {
+    const def = FILTER_DEFS[defKey];
+    const values = state.filterValues[defKey];
+    if (values && values.length) rows = rows.filter(h => values.includes(h[def.field]));
+  });
+  if (state.search.trim()) {
+    const q = state.search.trim().toLowerCase();
+    rows = rows.filter(h => h.name.toLowerCase().includes(q));
+  }
+  return rows;
+}
+
+function sortedRows(rows) {
+  if (!state.sortKey) return rows;
+  const col = COLUMNS.find(c => c.key === state.sortKey);
+  const copy = [...rows];
+  copy.sort((a, b) => {
+    let av = a[state.sortKey], bv = b[state.sortKey];
+    if (col.type === 'num') return (av - bv) * state.sortDir;
+    return String(av).localeCompare(String(bv)) * state.sortDir;
+  });
+  return copy;
+}
+
+// ---------- Render: table head ----------
+function renderHead() {
+  const row = $('#headRow');
+  row.innerHTML = '';
+  COLUMNS.filter(c => c.visible).forEach(col => {
+    const th = document.createElement('th');
+    if (col.sortable) {
+      th.className = 'sortable' + (state.sortKey === col.key ? ' sorted' : '');
+      const ind = state.sortKey === col.key ? (state.sortDir === 1 ? '▲' : '▼') : '↕';
+      th.innerHTML = `${col.label}<span class="sort-ind">${ind}</span>`;
+      th.addEventListener('click', () => {
+        if (state.sortKey === col.key) state.sortDir *= -1;
+        else { state.sortKey = col.key; state.sortDir = 1; }
+        render();
+      });
+    } else {
+      th.textContent = col.label;
+    }
+    row.appendChild(th);
+  });
+}
+
+// ---------- Render: table body ----------
+function renderBody(pageRows) {
+  const body = $('#hostBody');
+  body.innerHTML = '';
+  const visCols = COLUMNS.filter(c => c.visible);
+  pageRows.forEach(h => {
+    const tr = document.createElement('tr');
+    if (h.category === 'discrepancy') tr.className = 'discrepancy';
+    visCols.forEach(col => {
+      const td = document.createElement('td');
+      if (col.key === 'name') { td.className = 'mono'; td.textContent = h.name; }
+      else if (col.key === 'statusLabel') {
+        td.innerHTML = `<span class="cmp-statusdot ${h.statusKey}"><i></i>${h.statusLabel}</span>`;
+      }
+      else if (col.key === '_action') {
+        td.className = 'action';
+        const a = document.createElement('a');
+        a.textContent = 'View detail';
+        a.addEventListener('click', () => openDrawer(h));
+        td.appendChild(a);
+      }
+      else {
+        td.textContent = h[col.key];
+        if (col.type === 'num') td.className = 'mono';
+        if (h.category === 'discrepancy' && (col.key === 'cores' || col.key === 'ram')) {
+          td.innerHTML = `${h[col.key]}<span class="cmp-flag" title="Differs from vROps">!</span>`;
+          td.className = 'mono';
+        }
+      }
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+// ---------- Render: pagination ----------
+function renderPagination(total) {
+  const pages = Math.max(1, Math.ceil(total / state.pageSize));
+  if (state.page > pages) state.page = pages;
+  const el = $('#pagination');
+  el.innerHTML = '';
+  if (total === 0) return;
+
+  const mkBtn = (label, page, opts = {}) => {
+    const b = document.createElement('button');
+    b.className = 'pbtn' + (opts.active ? ' active' : '') + (opts.nav ? ' pnav' : '');
+    b.innerHTML = label;
+    if (opts.disabled) b.disabled = true;
+    else b.addEventListener('click', () => { state.page = page; render(); });
+    return b;
+  };
+  const mkEll = () => { const s = document.createElement('span'); s.className = 'pell'; s.textContent = '…'; return s; };
+
+  el.appendChild(mkBtn('<img src="../img/Controls/ArrowwithTail.svg" width="14" height="14" style="transform:scaleX(-1);vertical-align:-2px;" alt="">Previous', state.page - 1, { nav: true, disabled: state.page === 1 }));
+
+  const nums = new Set([1, 2, pages - 1, pages, state.page - 1, state.page, state.page + 1]);
+  const shown = [...nums].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+  let prev = 0;
+  shown.forEach(n => {
+    if (n - prev > 1) el.appendChild(mkEll());
+    el.appendChild(mkBtn(String(n), n, { active: n === state.page }));
+    prev = n;
+  });
+
+  el.appendChild(mkBtn('Next<img src="../img/Controls/ArrowwithTail.svg" width="14" height="14" style="vertical-align:-2px;" alt="">', state.page + 1, { nav: true, disabled: state.page === pages }));
+}
+
+// ---------- Filter chips: each chip is a real multi-select facet ----------
+// Toggle one option for a def. Emptying the list drops the whole chip.
+function toggleFilterValue(defKey, opt) {
+  const cur = state.filterValues[defKey] ? [...state.filterValues[defKey]] : [];
+  const idx = cur.indexOf(opt);
+  if (idx >= 0) cur.splice(idx, 1); else cur.push(opt);
+  if (cur.length === 0) {
+    delete state.filterValues[defKey];
+    state.filterOrder = state.filterOrder.filter(k => k !== defKey);
+    if (openFilterPopDef === defKey) openFilterPopDef = null;
+  } else {
+    state.filterValues[defKey] = cur;
+    if (!state.filterOrder.includes(defKey)) state.filterOrder.push(defKey);
+  }
+  state.page = 1;
+  render();
+}
+
+function filterPopHTML(defKey) {
+  const def = FILTER_DEFS[defKey];
+  const selected = state.filterValues[defKey] || [];
+  return def.options.map(opt => `
+    <label class="cmp-pop__item">
+      <input type="checkbox" data-opt="${opt}" ${selected.includes(opt) ? 'checked' : ''}>
+      <span>${opt}</span>
+    </label>`).join('');
+}
+
+// Which chip's multi-select popover is currently open (survives the chip-DOM rebuild on render).
+let openFilterPopDef = null;
+function showFilterPop(defKey, pop) {
+  pop.innerHTML = filterPopHTML(defKey);
+  pop.classList.remove('neo-hidden');
+  openPop = pop;
+  pop.addEventListener('click', e => e.stopPropagation());
+  pop.querySelectorAll('input[type="checkbox"]').forEach(inp => {
+    inp.addEventListener('change', () => toggleFilterValue(defKey, inp.dataset.opt));
+  });
+}
+
+// ---------- Render: filter chips ----------
+function renderChips() {
+  const host = $('#chipHost');
+  host.innerHTML = '';
+  state.filterOrder.forEach(defKey => {
+    const def = FILTER_DEFS[defKey];
+    const values = state.filterValues[defKey] || [];
+    if (!values.length) return;
+    const chip = document.createElement('span');
+    chip.className = 'cmp-chip';
+    chip.style.position = 'relative';
+    chip.innerHTML = `<span class="k">${def.label}:</span><span class="v">${values[0]}</span>` +
+      (values.length > 1 ? `<span class="more">+${values.length - 1}</span>` : '') +
+      `<span class="x" title="Remove filter">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3.5 3.5l5 5M8.5 3.5l-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </span>
+      <div class="cmp-pop neo-hidden"></div>`;
+    chip.querySelector('.x').addEventListener('click', e => {
+      e.stopPropagation();
+      delete state.filterValues[defKey];
+      state.filterOrder = state.filterOrder.filter(k => k !== defKey);
+      if (openFilterPopDef === defKey) openFilterPopDef = null;
+      state.page = 1; render();
+    });
+    chip.addEventListener('click', e => {
+      if (e.target.closest('.x')) return;
+      e.stopPropagation();
+      const reopen = openFilterPopDef !== defKey;
+      if (openPop) { openPop.classList.add('neo-hidden'); openPop = null; }
+      openFilterPopDef = reopen ? defKey : null;
+      if (reopen) showFilterPop(defKey, chip.querySelector('.cmp-pop'));
+    });
+    host.appendChild(chip);
+    if (openFilterPopDef === defKey) showFilterPop(defKey, chip.querySelector('.cmp-pop'));
+  });
+}
+
+// ---------- Render: view selector label ----------
+function renderViewSel() {
+  const v = VIEWS.find(v => v.key === state.view) || VIEWS[0];
+  $('#viewSelLabel').textContent = v.label;
+  $('#viewSelCount').textContent = viewCount(state.view);
+  // reflect active summary stat
+  $$('.cmp-stat').forEach(s => s.classList.toggle('is-active', s.dataset.view === state.view));
+}
+
+// ---------- Master render ----------
+function render() {
+  renderViewSel();
+  renderChips();
+  renderHead();
+  const rows = sortedRows(filteredRows());
+  const total = rows.length;
+  const start = (state.page - 1) * state.pageSize;
+  const pageRows = rows.slice(start, start + state.pageSize);
+
+  const empty = $('#emptyState');
+  const table = $('#hostTable');
+  if (total === 0) { empty.classList.remove('neo-hidden'); table.classList.add('neo-hidden'); }
+  else { empty.classList.add('neo-hidden'); table.classList.remove('neo-hidden'); renderBody(pageRows); }
+
+  renderPagination(total);
+}
+
+// ---------- Popover plumbing ----------
+let openPop = null;
+function closePops() {
+  if (openPop) { openPop.classList.add('neo-hidden'); openPop = null; }
+  openFilterPopDef = null;
+}
+function togglePop(pop) {
+  if (openPop === pop) { closePops(); return; }
+  closePops();
+  pop.classList.remove('neo-hidden');
+  openPop = pop;
+}
+document.addEventListener('click', e => {
+  if (openPop && !openPop.contains(e.target) && !e.target.closest('[data-pop-trigger]')) closePops();
+});
+
+// View selector popover
+(() => {
+  const btn = $('#viewSelBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#viewPop');
+  pop.innerHTML = VIEWS.map(v =>
+    `<div class="cmp-pop__item" data-view="${v.key}"><span>${v.label}</span><span class="cnt">${viewCount(v.key)}</span></div>`
+  ).join('');
+  btn.addEventListener('click', e => { e.stopPropagation(); togglePop(pop); });
+  pop.querySelectorAll('.cmp-pop__item').forEach(it =>
+    it.addEventListener('click', () => { state.view = it.dataset.view; state.page = 1; closePops(); render(); }));
+})();
+
+// Manage columns popover
+(() => {
+  const btn = $('#columnsBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#columnsPop');
+  function paint() {
+    pop.innerHTML = COLUMNS.filter(c => c.key !== '_action').map(c =>
+      `<label class="cmp-pop__item"><input type="checkbox" data-col="${c.key}" ${c.visible ? 'checked' : ''}>${c.label}</label>`
+    ).join('');
+    pop.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => {
+      const col = COLUMNS.find(c => c.key === inp.dataset.col);
+      col.visible = inp.checked;
+      if (state.sortKey === col.key && !col.visible) { state.sortKey = null; }
+      render();
+    }));
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); paint(); togglePop(pop); });
+})();
+
+// Page size popover
+(() => {
+  const btn = $('#pageSizeBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#pageSizePop');
+  [10, 25, 50, 100].forEach(n => {
+    const it = document.createElement('div');
+    it.className = 'cmp-pop__item';
+    it.textContent = `${n}/page`;
+    it.addEventListener('click', () => {
+      state.pageSize = n; state.page = 1;
+      $('#pageSizeLabel').textContent = `${n}/page`;
+      closePops(); render();
+    });
+    pop.appendChild(it);
+  });
+  btn.addEventListener('click', e => { e.stopPropagation(); togglePop(pop); });
+})();
+
+// Add filter popover — same underlying multi-select facets as the chips themselves.
+(() => {
+  const btn = $('#addFilterBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#addFilterPop');
+  function paint() {
+    let html = '';
+    Object.entries(FILTER_DEFS).forEach(([defKey, def]) => {
+      html += `<div class="cmp-pop__item" style="color:var(--neo-fg-3);cursor:default;">${def.label}</div>`;
+      const selected = state.filterValues[defKey] || [];
+      def.options.forEach(opt => {
+        html += `<label class="cmp-pop__item"><input type="checkbox" data-def="${defKey}" data-val="${opt}" ${selected.includes(opt) ? 'checked' : ''}><span>${opt}</span></label>`;
+      });
+      html += '<div class="cmp-pop__sep"></div>';
+    });
+    pop.innerHTML = html;
+    pop.querySelectorAll('[data-def]').forEach(inp => inp.addEventListener('change', () => {
+      toggleFilterValue(inp.dataset.def, inp.dataset.val);
+      paint();
+    }));
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); paint(); togglePop(pop); });
+})();
+
+// ---------- Clear all / defaults ----------
+$('#clearAllBtn').addEventListener('click', () => {
+  state.filterOrder = []; state.filterValues = {}; state.search = '';
+  state.view = 'matched'; state.page = 1; render();
+});
+$('#defaultsBtn').addEventListener('click', () => {
+  state.filterOrder = [...DEFAULT_FILTER_ORDER];
+  state.filterValues = JSON.parse(JSON.stringify(DEFAULT_FILTER_VALUES));
+  state.search = '';
+  state.view = 'matched'; state.sortKey = null; state.page = 1; render();
+});
+
+// ---------- Summary stat click → switch view ----------
+$$('.cmp-stat').forEach(s => s.addEventListener('click', () => {
+  const view = s.dataset.view;
+  if (VIEWS.some(v => v.key === view)) { state.view = view; state.page = 1; render(); }
+}));
+
+// ---------- Data freshness toggle + live refresh simulation ----------
+const FRESHNESS_ICONS = {
+  info: '<img src="../img/Objects/Info.svg" width="16" height="16" alt="">',
+  spinner: `<svg class="cmp-spinner" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-dasharray="27 12"/>
+  </svg>`,
+  check: `<svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+    <circle class="chk-bg" cx="7" cy="7" r="7"/>
+    <path d="M4 7.2L6.1 9.3L10 4.9" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`
+};
+const LIVE_REFRESH_MS = 5000;
+let liveRefreshTimer = null;
+
+function formatRefreshStamp(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function setBanner({ icon, text, linkVisible, success }) {
+  $('#freshnessIcon').innerHTML = FRESHNESS_ICONS[icon];
+  $('#freshnessText').textContent = text;
+  $('#freshnessLink').classList.toggle('neo-hidden', !linkVisible);
+  $('#freshnessBanner').classList.toggle('success', !!success);
+}
+
+function startLiveRefresh() {
+  clearTimeout(liveRefreshTimer);
+  setBanner({
+    icon: 'spinner',
+    text: 'Live view — querying both sources directly. Results may take longer to load. Now refreshing…',
+    linkVisible: false,
+    success: false
+  });
+  liveRefreshTimer = setTimeout(() => {
+    setBanner({
+      icon: 'check',
+      text: `Refresh completed. Complete at: ${formatRefreshStamp(new Date())}`,
+      linkVisible: true,
+      success: true
+    });
+  }, LIVE_REFRESH_MS);
+}
+
+function stopLiveRefresh() {
+  clearTimeout(liveRefreshTimer);
+  liveRefreshTimer = null;
+}
+
+$$('#dataFreshness button').forEach(b => b.addEventListener('click', () => {
+  $$('#dataFreshness button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  if (b.dataset.fresh === 'live') {
+    startLiveRefresh();
+  } else {
+    stopLiveRefresh();
+    setBanner({
+      icon: 'info',
+      text: 'Full analysis and insights are ready instantly, from the last synced pull.',
+      linkVisible: false,
+      success: false
+    });
+  }
+}));
+
+$('#freshnessLink').addEventListener('click', () => {
+  if ($('#dataFreshness button[data-fresh="live"]').classList.contains('active')) startLiveRefresh();
+});
+
+// ---------- Swap sources ----------
+$('#swapBtn').addEventListener('click', () => {
+  const wrap = $('#compareChips');
+  const chips = wrap.querySelectorAll('.neo-source-chip');
+  wrap.insertBefore(chips[1], chips[0]);
+});
+
+// ---------- Sidebar nav (show active only; single-page) ----------
+$$('.neo-sidebar__item').forEach(item => item.addEventListener('click', () => {
+  $$('.neo-sidebar__item').forEach(i => i.classList.remove('active'));
+  item.classList.add('active');
+}));
+
+// ---------- Back button ----------
+$('#backBtn').addEventListener('click', () => history.length > 1 ? history.back() : null);
+
+// ---------- Export (mock CSV of current filtered/sorted rows) ----------
+$('#exportBtn').addEventListener('click', () => {
+  const rows = sortedRows(filteredRows());
+  const cols = COLUMNS.filter(c => c.visible && c.key !== '_action');
+  const header = cols.map(c => c.label).join(',');
+  const lines = rows.map(h => cols.map(c => JSON.stringify(String(h[c.key] ?? ''))).join(','));
+  const csv = [header, ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${state.view}-hosts.csv`; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ---------- Detail drawer ----------
+function openDrawer(h) {
+  $('#drawerTitle').textContent = h.name;
+  const rowsEl = $('#drawerRows');
+  rowsEl.innerHTML = '';
+  Object.entries(h.compare).forEach(([attr, [sn, vr]]) => {
+    const mismatch = String(sn) !== String(vr);
+    const row = document.createElement('div');
+    row.className = 'cmp-drow' + (mismatch ? ' mismatch' : '');
+    row.innerHTML = `<span class="attr">${attr}</span>
+      <span class="cell">${sn}</span>
+      <span class="cell">${vr}${mismatch && vr !== '—' ? ' <span class="neo-pill mismatch" style="margin-left:2px;">≠</span>' : ''}</span>`;
+    rowsEl.appendChild(row);
+  });
+  $('#scrim').classList.add('open');
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+}
+function closeDrawer() {
+  $('#scrim').classList.remove('open');
+  $('#drawer').classList.remove('open');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+}
+$('#drawerClose').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closePops(); } });
+
+// ---------- Boot ----------
+render();
+</script>
+</body>
+</html>

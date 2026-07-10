@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odd-Numbered Tile Layouts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        /* Grid System for 1920×1080 */
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 0 56px; /* Your grid margin */
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0px;
+            right: 56px;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.1;
+        }
+
+        .grid-column {
+            position: absolute;
+            height: 100%;
+            width: 136px;
+            background: blue;
+        }
+
+        /* Position each column */
+        .grid-column:nth-child(1) { left: 0; }
+        .grid-column:nth-child(2) { left: 152px; }
+        .grid-column:nth-child(3) { left: 304px; }
+        .grid-column:nth-child(4) { left: 456px; }
+        .grid-column:nth-child(5) { left: 608px; }
+        .grid-column:nth-child(6) { left: 760px; }
+        .grid-column:nth-child(7) { left: 912px; }
+        .grid-column:nth-child(8) { left: 1064px; }
+        .grid-column:nth-child(9) { left: 1216px; }
+        .grid-column:nth-child(10) { left: 1368px; }
+        .grid-column:nth-child(11) { left: 1520px; }
+        .grid-column:nth-child(12) { left: 1672px; }
+
+        .section {
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        /* Method 1: Flexbox with exact calculations */
+        .tile-container-flex {
+            display: flex;
+            gap: 16px; /* Match grid gutter */
+        }
+
+        .tile {
+            background: white;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #333;
+            min-height: 200px;
+        }
+
+        /* 3 Tiles - Each tile spans 4 columns */
+        .tiles-3 .tile {
+            width: 568px; /* 4 columns × 136px + 3 gutters × 16px */
+        }
+
+        /* 5 Tiles - Using 10 columns with padding */
+        .tiles-5-container {
+            padding: 0 152px; /* 1 column + 1 gutter each side */
+        }
+
+        .tiles-5 .tile {
+            flex: 1;
+        }
+
+        /* 7 Tiles - Full width with flex */
+        .tiles-7 .tile {
+            flex: 1;
+        }
+
+        /* Method 2: CSS Grid */
+        .tile-container-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-5 {
+            grid-template-columns: repeat(5, 1fr);
+            padding: 0 76px; /* Half column each side for visual balance */
+        }
+
+        .grid-7 {
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        /* Method 3: Custom width calculation */
+        .tile-container-custom {
+            display: flex;
+            gap: 16px;
+        }
+
+        /* For 5 tiles: (1808px - 64px gaps) / 5 = 348.8px per tile */
+        .custom-5 .tile {
+            width: 348px; /* Rounded down to nearest 4px */
+        }
+
+        /* For 7 tiles: (1808px - 96px gaps) / 7 = 244.57px per tile */
+        .custom-7 .tile {
+            width: 244px; /* Rounded down to nearest 4px */
+        }
+
+        /* Visual helpers */
+        .method-label {
+            display: inline-block;
+            background: #e0e0e0;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .tile-number {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #f0f0f0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Toggle button */
+        .toggle-grid {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .show-grid .grid-overlay {
+            opacity: 0.15;
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-grid" onclick="document.body.classList.toggle('show-grid')">
+        Toggle Grid
+    </button>
+
+    <div class="container">
+        <!-- 3 Tiles Layout -->
+        <div class="section">
+            <div class="grid-overlay">
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+            </div>
+            
+            <h2>3 Tiles Layout</h2>
+            <p class="description">Perfect fit: Each tile spans exactly 4 columns (4 × 136px + 3 × 16px = 568px)</p>
+            
+            <span class="method-label">Method: 12-column alignment</span>
+            <div class="tile-container-flex tiles-3">
+                <div class="tile">
+                    <span class="tile-number">1</span>
+                    Tile 1<br>4 columns
+                </div>
+                <div class="tile">
+                    <span class="tile-number">2</span>
+                    Tile 2<br>4 columns
+                </div>
+                <div class="tile">
+                    <span class="tile-number">3</span>
+                    Tile 3<br>4 columns
+                </div>
+            </div>
+        </div>
+
+        <!-- 5 Tiles Layout - Method 1 -->
+        <div class="section">
+            <div class="grid-overlay">
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+            </div>
+            
+            <h2>5 Tiles Layout - Centered</h2>
+            <p class="description">Using 10 columns with 1-column padding on each side for visual balance</p>
+            
+            <span class="method-label">Method 1: Flexbox with padding</span>
+            <div class="tiles-5-container">
+                <div class="tile-container-flex tiles-5">
+                    <div class="tile">
+                        <span class="tile-number">1</span>
+                        Tile 1
+                    </div>
+                    <div class="tile">
+                        <span class="tile-number">2</span>
+                        Tile 2
+                    </div>
+                    <div class="tile">
+                        <span class="tile-number">3</span>
+                        Tile 3
+                    </div>
+                    <div class="tile">
+                        <span class="tile-number">4</span>
+                        Tile 4
+                    </div>
+                    <div class="tile">
+                        <span class="tile-number">5</span>
+                        Tile 5
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5 Tiles Layout - Method 2 -->
+        <div class="section">
+            <div class="grid-overlay">
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+            </div>
+            
+            <h2>5 Tiles Layout - Full Width</h2>
+            <p class="description">Using CSS Grid with custom calculated widths (348px each)</p>
+            
+            <span class="method-label">Method 2: Custom width calculation</span>
+            <div class="tile-container-custom custom-5">
+                <div class="tile">
+                    <span class="tile-number">1</span>
+                    348px
+                </div>
+                <div class="tile">
+                    <span class="tile-number">2</span>
+                    348px
+                </div>
+                <div class="tile">
+                    <span class="tile-number">3</span>
+                    348px
+                </div>
+                <div class="tile">
+                    <span class="tile-number">4</span>
+                    348px
+                </div>
+                <div class="tile">
+                    <span class="tile-number">5</span>
+                    348px
+                </div>
+            </div>
+        </div>
+
+        <!-- 7 Tiles Layout -->
+        <div class="section">
+            <div class="grid-overlay">
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+            </div>
+            
+            <h2>7 Tiles Layout</h2>
+            <p class="description">Full width with equal distribution using flexbox</p>
+            
+            <span class="method-label">Method: Flexbox equal distribution</span>
+            <div class="tile-container-flex tiles-7">
+                <div class="tile">
+                    <span class="tile-number">1</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">2</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">3</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">4</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">5</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">6</span>
+                    Flex: 1
+                </div>
+                <div class="tile">
+                    <span class="tile-number">7</span>
+                    Flex: 1
+                </div>
+            </div>
+        </div>
+
+        <!-- Mixed Layout Example -->
+        <div class="section">
+            <div class="grid-overlay">
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+                <div class="grid-column"></div>
+            </div>
+            
+            <h2>Mixed Layout Example</h2>
+            <p class="description">Combining grid-aligned sections with odd-numbered tiles</p>
+            
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                <div class="tile" style="width: 568px;">
+                    <span class="tile-number">A</span>
+                    Sidebar<br>4 columns
+                </div>
+                <div style="flex: 1;">
+                    <span class="method-label">5 tiles in 8-column space</span>
+                    <div class="tile-container-flex tiles-5">
+                        <div class="tile">1</div>
+                        <div class="tile">2</div>
+                        <div class="tile">3</div>
+                        <div class="tile">4</div>
+                        <div class="tile">5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

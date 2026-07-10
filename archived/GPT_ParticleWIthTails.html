@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSAP River Flow Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+    </style>
+</head>
+<body>
+    <svg id="scene" width="800" height="400" xmlns="http://www.w3.org/2000/svg" style="background:black">
+        <!-- Ghost circles (the trail) -->
+        <g id="trail"></g>
+        
+        <!-- Particle -->
+        <circle id="particle" r="6" fill="cyan"/>
+        
+        <script>
+          const svg = document.getElementById("scene");
+          const particle = document.getElementById("particle");
+          const trailGroup = document.getElementById("trail");
+      
+          const w = svg.width.baseVal.value;
+          const h = svg.height.baseVal.value;
+      
+          let x = w/2, y = h/2;
+          let vx = 2.5, vy = 1.8;
+      
+          const history = [];
+          const maxTrail = 15; // number of ghosts
+      
+          function animate(){
+            // move
+            x += vx;
+            y += vy;
+      
+            // bounce edges
+            if (x < 0 || x > w) vx *= -1;
+            if (y < 0 || y > h) vy *= -1;
+      
+            // store history
+            history.push([x,y]);
+            if (history.length > maxTrail) history.shift();
+      
+            // update particle
+            particle.setAttribute("cx", x);
+            particle.setAttribute("cy", y);
+      
+            // clear old ghosts
+            trailGroup.innerHTML = "";
+      
+            // draw ghost circles with fading opacity
+            history.forEach((pos, i) => {
+              const alpha = (i+1)/history.length * 0.5; // 0 → 0.5 opacity
+              const ghost = document.createElementNS("http://www.w3.org/2000/svg","circle");
+              ghost.setAttribute("cx", pos[0]);
+              ghost.setAttribute("cy", pos[1]);
+              ghost.setAttribute("r", 6);
+              ghost.setAttribute("fill", "cyan");
+              ghost.setAttribute("opacity", alpha);
+              trailGroup.appendChild(ghost);
+            });
+      
+            requestAnimationFrame(animate);
+          }
+          animate();
+        </script>
+      </svg>
+      
+</body>
+</html>
+  

@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Results - TechBuddy</title>
+  <!-- Keyword search results view — grouped by data source (Dynatrace, ServiceNow, VMware VROPS) -->
+  <!-- Search simulation: click Search button to trigger GSAP-orchestrated reveal animation -->
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --text-dark:     #06001A;
+      --text-mid:      #797990;
+      --text-link:     #0876F5;
+      --brand-blue:    #6271EB;
+      --border-grey:   #A5B3CD;
+      --border-light:  #EEF1F6;
+      --border-purple: #DFDBEF;
+      --gray-dark:     #4A526B;
+      --gray-cool:     #A6A8BD;
+      --pale-ice:      #EFEFFB;
+      --highlight:     #F8E389;
+      --neon-aqua:     #2CE1B3;
+      --shadow:        0 2px 6px 2px rgba(170,173,209,.15), 0 1px 2px 0 rgba(170,173,209,.30);
+    }
+
+    body {
+      font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F0F2F8;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 20px;
+    }
+
+    .dashboard-body {
+      width: 1176px;
+      background: #fff;
+      position: relative;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+    }
+
+    /* ── Close ── */
+    .close-btn {
+      position: absolute;
+      top: 13px; right: 15px;
+      width: 14px; height: 14px;
+      background: none; border: none;
+      padding: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+    }
+
+    /* ── Tab nav ── */
+    .tab-nav {
+      display: flex;
+      align-items: flex-end;
+      padding: 20px 20px 0;
+    }
+
+    .tab-list {
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .tab-inner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-bottom: 6px;
+    }
+
+    .tab-text {
+      font-size: 13px;
+      color: var(--text-mid);
+      white-space: nowrap;
+      line-height: 18px;
+    }
+
+    .tab-item.active .tab-text {
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    .tab-underline {
+      height: 2px;
+      border-radius: 1px;
+    }
+
+    .tab-item.active .tab-underline { background: var(--brand-blue); }
+
+    .tab-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 4px;
+      padding-right: 28px;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 26px;
+      padding: 0 8px;
+      border: 1px solid var(--border-grey);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-dark);
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .icon-btn.icon-only { width: 30px; padding: 0; }
+
+    /* ── Results bar ── */
+    .results-bar {
+      display: flex;
+      flex-direction: column;
+      padding: 10px 20px;
+      border-top: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
+      gap: 6px;
+    }
+
+    .results-bar-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .results-left {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .results-label {
+      font-size: 11px;
+      color: var(--text-mid);
+    }
+
+    .results-entity {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--brand-blue);
+      letter-spacing: -0.3px;
+      line-height: 1;
+    }
+
+    /* Source status chips */
+    .source-chips {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .source-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-mid);
+      white-space: nowrap;
+    }
+
+    /* Search area */
+    .search-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border-grey);
+      border-radius: 4px;
+      padding: 0 10px;
+      height: 34px;
+      width: 200px;
+      background: #fff;
+    }
+
+    .search-input-wrap input {
+      border: none; outline: none;
+      font-size: 13px;
+      color: var(--text-dark);
+      font-family: inherit;
+      width: 100%;
+      background: transparent;
+    }
+
+    .search-input-wrap input::placeholder { color: var(--text-mid); }
+
+    .search-btn {
+      height: 34px;
+      padding: 0 16px;
+      background: var(--text-link);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .bookmark-btn {
+      width: 34px; height: 34px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* ── Page body ── */
+    .sections-container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Section ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .section-chevron {
+      margin-left: 2px;
+      transition: transform .2s ease;
+      color: var(--gray-cool);
+    }
+
+    .section-body {
+      background: #FAFBFF;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .section-body.collapsed { display: none; }
+
+    /* source icon circles */
+    .src-icon {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .src-icon.dyna { background: var(--neon-aqua); color: #fff; }
+    .src-icon.sn   { background: #3EBD5C; color: #fff; }
+    .src-icon.vm   { background: var(--text-link); color: #fff; }
+
+    /* ── Type sub-row ── */
+    .type-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .type-label {
+      font-size: 11px;
+      color: var(--text-mid);
+    }
+
+    .type-controls {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ctrl-btn {
+      width: 20px; height: 20px;
+      border: 1px solid var(--border-grey);
+      border-radius: 3px;
+      background: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      line-height: 1;
+      color: var(--gray-dark);
+    }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .result-card {
+      border: 1px solid #DFDBEF;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--border-grey);
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 11px;
+      color: var(--gray-dark);
+      margin: 10px 0 6px 10px;
+      height: 18px;
+    }
+
+    .badge-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .badge-dot.a { background: var(--brand-blue); }
+    .badge-dot.b { background: #F59E0B; }
+
+    .card-rows {
+      padding: 0 10px 6px;
+    }
+
+    .card-row {
+      display: flex;
+      align-items: baseline;
+      min-height: 22px;
+      font-size: 12px;
+      line-height: 22px;
+    }
+
+    .cr-label {
+      color: var(--text-mid);
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .cr-value {
+      color: var(--text-dark);
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .kw {
+      background: var(--highlight);
+      border-radius: 2px;
+      padding: 0 2px;
+      font-weight: 600;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 5px 10px 8px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .full-details {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: var(--text-mid);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .full-details:hover { color: var(--text-link); }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .page-arrow {
+      background: none;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      width: 24px; height: 24px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-dark);
+    }
+
+    .page-num {
+      width: 24px; height: 24px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      background: #fff;
+      font-size: 12px;
+      font-family: inherit;
+      color: var(--text-mid);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .page-num.active {
+      background: var(--brand-blue);
+      border-color: var(--brand-blue);
+      color: #fff;
+    }
+
+    /* ═══════════════════════════════════════════
+       Animation styles — GSAP owns all transitions
+    ═══════════════════════════════════════════ */
+
+    /* Sections hidden until Search is clicked — GSAP reveals them */
+    .source-section {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* Progress ring overlay wrap */
+    .source-icon-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .source-chip .source-icon-wrap {
+      width: 25px;
+      height: 25px;
+    }
+
+    .section-header .source-icon-wrap {
+      width: 25px;
+      height: 25px;
+    }
+
+    .source-icon-wrap img {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Ring SVG sits absolutely over the icon — GSAP owns rotation, no CSS animation */
+    .progress-ring {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* Gradient text sweep — CSS class toggled by GSAP callbacks */
+    .status-text.sweeping,
+    .section-status-text.sweeping {
+      background: linear-gradient(90deg, #999 0%, #999 25%, #111 50%, #999 75%, #999 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: text-sweep 1.8s linear infinite;
+    }
+
+    @keyframes text-sweep {
+      0%   { background-position: 100% center; }
+      100% { background-position: -100% center; }
+    }
+
+    .status-text.static,
+    .section-status-text.static {
+      animation: none;
+      -webkit-text-fill-color: unset;
+      background: none;
+    }
+
+    /* Section header status text (ServiceNow dynamic title) */
+    .section-status-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    /* Stop searching link — GSAP drives opacity */
+    .stop-searching-link {
+      display: none;
+      margin-left: 4px;
+      color: #0066CC;
+      font-size: 13px;
+      font-weight: 400;
+      text-decoration: underline;
+      cursor: pointer;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div class="dashboard-body">
+
+  <!-- ── Close ── -->
+  <button class="close-btn" aria-label="Close">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M1.5 1.5L12.5 12.5M12.5 1.5L1.5 12.5" stroke="#4A526B" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <!-- ── Tab nav ── -->
+  <nav class="tab-nav">
+    <div class="tab-list">
+
+      <div class="tab-item">
+        <div class="tab-inner">
+          <img src="../img/Objects/Tickets.svg" width="14" height="14" alt="">
+          <span class="tab-text">Incident</span>
+        </div>
+        <div class="tab-underline"></div>
+      </div>
+
+      <div class="tab-item">
+        <div class="tab-inner">
+          <img src="../img/Objects/IPAddress.svg" width="14" height="14" alt="">
+          <span class="tab-text">IP Address &amp; device</span>
+        </div>
+        <div class="tab-underline"></div>
+      </div>
+
+      <div class="tab-item active">
+        <div class="tab-inner">
+          <img src="../img/Objects/Server.svg" width="14" height="14" alt="">
+          <span class="tab-text">Server &amp; Application</span>
+        </div>
+        <div class="tab-underline"></div>
+      </div>
+
+      <div class="tab-item">
+        <div class="tab-inner">
+          <img src="../img/Sys/Jira.svg" width="12" height="12" alt="">
+          <span class="tab-text">Jira issue</span>
+        </div>
+        <div class="tab-underline"></div>
+      </div>
+
+    </div>
+
+    <div class="tab-actions">
+      <button class="icon-btn icon-only" title="Refresh">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M2.5 7a4.5 4.5 0 1 0 1.08-2.88" stroke="#4A526B" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M2.5 3.5V7H6" stroke="#4A526B" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="icon-btn">
+        <img src="../img/Controls/Share.svg" width="13" height="13" alt="">
+        Share
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── Results bar ── -->
+  <div class="results-bar">
+    <div class="results-bar-top">
+      <div class="results-left">
+        <span class="results-label">Results for</span>
+        <span class="results-entity">Keywords</span>
+      </div>
+      <div class="search-area">
+        <div class="search-input-wrap">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <circle cx="6" cy="6" r="4" stroke="#A6A8BD" stroke-width="1.2"/>
+            <path d="M9.2 9.2L12 12" stroke="#A6A8BD" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <input type="text" value='"Keywords"'>
+        </div>
+        <button class="search-btn" id="search-btn">Search</button>
+        <button class="bookmark-btn" title="Save search">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M2.5 2.5C2.5 1.95 2.95 1.5 3.5 1.5H10.5C11.05 1.5 11.5 1.95 11.5 2.5V12.5L7 10L2.5 12.5V2.5Z" stroke="#4A526B" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div><!-- /.results-bar-top -->
+
+    <div class="source-chips">
+
+      <div class="source-chip" data-source="dynatrace">
+        <span class="source-icon-wrap">
+          <img src="../img/Sys/Dynatrace.svg" width="12" height="12" alt="">
+          <svg class="progress-ring" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle class="progress-ring__arc" cx="16" cy="16" r="13" fill="none" stroke="#009900" stroke-width="2" stroke-linecap="round" stroke-dasharray="25 57"/>
+          </svg>
+        </span>
+        <span>Dynatrace: <span class="status-text static">6 a-types</span></span>
+      </div>
+
+      <div class="source-chip" data-source="servicenow">
+        <span class="source-icon-wrap">
+          <img src="../img/Sys/SN.svg" width="12" height="12" alt="">
+          <svg class="progress-ring" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle class="progress-ring__arc" cx="16" cy="16" r="13" fill="none" stroke="#62D84E" stroke-width="2" stroke-linecap="round" stroke-dasharray="25 57"/>
+          </svg>
+        </span>
+        <span>ServiceNow: <span class="status-text static">1 found</span><a class="stop-searching-link">Stop searching</a></span>
+      </div>
+
+      <div class="source-chip" data-source="vmwvrops">
+        <span class="source-icon-wrap">
+          <img src="../img/Sys/VMW.svg" width="12" height="12" alt="">
+          <svg class="progress-ring" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle class="progress-ring__arc" cx="16" cy="16" r="13" fill="none" stroke="#1D428A" stroke-width="2" stroke-linecap="round" stroke-dasharray="25 57"/>
+          </svg>
+        </span>
+        <span>VMW VROPS: <span class="status-text static">8 b-types</span></span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Sections ── -->
+  <div class="sections-container">
+
+    <!-- ════ Dynatrace ════ -->
+    <section id="section-dynatrace" class="source-section">
+      <div class="section-header" onclick="toggleSection(this, event)">
+        <img src="../img/Sys/Dynatrace.svg" width="16" height="16" alt="">
+        <span class="section-title">Dynatrace</span>
+        <svg class="section-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 5.5L7 9L10.5 5.5" stroke="#A6A8BD" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="section-body">
+        <div class="type-row">
+          <span class="type-label">A-type(6)</span>
+          <div class="type-controls">
+            <button class="ctrl-btn">−</button>
+            <button class="ctrl-btn">+</button>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot a"></span>a-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot a"></span>a-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot a"></span>a-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot a"></span>a-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+        </div><!-- /.cards-grid -->
+
+        <div class="pagination">
+          <button class="page-arrow">
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M8.5 3L5 7L8.5 11" stroke="#4A526B" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="page-num active">1</button>
+          <button class="page-num">2</button>
+          <button class="page-arrow">
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M5.5 3L9 7L5.5 11" stroke="#4A526B" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div><!-- /.section-body -->
+    </section>
+
+    <!-- ════ ServiceNow ════ -->
+    <section id="section-servicenow" class="source-section">
+      <div class="section-header" onclick="toggleSection(this, event)">
+        <!-- source-icon-wrap carries data-source so startRing/stopRing can target this arc -->
+        <span class="source-icon-wrap" data-source="servicenow">
+          <img src="../img/Sys/SN.svg" width="16" height="16" alt="">
+          <svg class="progress-ring" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+            <circle class="progress-ring__arc" cx="16" cy="16" r="13" fill="none" stroke="#62D84E" stroke-width="2" stroke-linecap="round" stroke-dasharray="25 57"/>
+          </svg>
+        </span>
+        <span class="section-status-text static">ServiceNow</span>
+        <a class="stop-searching-link">Stop searching</a>
+        <svg class="section-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 5.5L7 9L10.5 5.5" stroke="#A6A8BD" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="section-body">
+        <div class="type-row">
+          <span class="type-label">A-type ( 1 exact match)</span>
+          <div class="type-controls">
+            <button class="ctrl-btn">−</button>
+            <button class="ctrl-btn">+</button>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot a"></span>a-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+        </div><!-- /.cards-grid -->
+      </div><!-- /.section-body -->
+    </section>
+
+    <!-- ════ VMware VROPS ════ -->
+    <section id="section-vmwvrops" class="source-section">
+      <div class="section-header" onclick="toggleSection(this, event)">
+        <img src="../img/Sys/VMW.svg" width="16" height="16" alt="">
+        <span class="section-title">VMWare VROPS</span>
+        <svg class="section-chevron" width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 5.5L7 9L10.5 5.5" stroke="#A6A8BD" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="section-body">
+        <div class="type-row">
+          <span class="type-label">B-type(8)</span>
+          <div class="type-controls">
+            <button class="ctrl-btn">−</button>
+            <button class="ctrl-btn">+</button>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot b"></span>b-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot b"></span>b-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot b"></span>b-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <span class="card-badge"><span class="badge-dot b"></span>b-type</span>
+            <div class="card-rows">
+              <div class="card-row"><span class="cr-label">Field:</span><span class="cr-value"><span class="kw">Keywords</span></span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+              <div class="card-row"><span class="cr-label">Parameter:</span><span class="cr-value">Value</span></div>
+            </div>
+            <div class="card-footer">
+              <a class="full-details" href="#">Full details
+                <img src="../img/Controls/JumpTo.svg" width="12" height="12" alt="">
+              </a>
+            </div>
+          </div>
+
+        </div><!-- /.cards-grid -->
+
+        <div class="pagination">
+          <button class="page-arrow">
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M8.5 3L5 7L8.5 11" stroke="#4A526B" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="page-num active">1</button>
+          <button class="page-num">2</button>
+          <button class="page-arrow">
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M5.5 3L9 7L5.5 11" stroke="#4A526B" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div><!-- /.section-body -->
+    </section>
+
+  </div><!-- /.sections-container -->
+
+</div><!-- /.dashboard-body -->
+
+<script>
+  function toggleSection(header, event) {
+    if (event && event.target.classList.contains('stop-searching-link')) return;
+    const body = header.nextElementSibling;
+    const chevron = header.querySelector('.section-chevron');
+    const collapsed = body.classList.toggle('collapsed');
+    chevron.style.transform = collapsed ? 'rotate(-90deg)' : '';
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Search Animation Controller — requires GSAP 3.x
+  //
+  // State transitions:
+  //   Dynatrace  : searching → done          (T = 1.5s)
+  //   VMW VROPS  : searching → done          (T = 1.5s)
+  //   ServiceNow : searching → found         (T = 1.5s)
+  //                found → found+cancel link  (T = 15s)
+  //                found+cancel → stopped    (on click)
+  // ═══════════════════════════════════════════════════════
+
+  let masterTl = null;
+  let ringTweens = {};
+
+  function resetAll() {
+    if (masterTl) masterTl.kill();
+    Object.values(ringTweens).forEach(t => t && t.kill());
+    ringTweens = {};
+
+    gsap.set('.source-section', { opacity: 0, visibility: 'hidden', y: 8 });
+    gsap.set('.progress-ring', { opacity: 1 });
+    gsap.set('.progress-ring__arc', { rotation: 0 });
+    gsap.set('.stop-searching-link', { display: 'none', opacity: 0, pointerEvents: 'none' });
+
+    ['dynatrace', 'servicenow', 'vmwvrops'].forEach(id => {
+      setStatusText(id, 'Searching\u2026', true);
+    });
+
+    // Reset any collapsed section state from previous run
+    document.querySelectorAll('.section-body').forEach(b => b.classList.remove('collapsed'));
+    document.querySelectorAll('.section-chevron').forEach(c => c.style.transform = '');
+  }
+
+  function setStatusText(sourceId, text, sweeping) {
+    // Targets the status bar chip AND (for servicenow) the section header title
+    const els = document.querySelectorAll(
+      `[data-source="${sourceId}"] .status-text, #section-${sourceId} .section-status-text`
+    );
+    els.forEach(el => {
+      el.textContent = text;
+      el.classList.toggle('sweeping', sweeping);
+      el.classList.toggle('static', !sweeping);
+    });
+  }
+
+  function startRing(sourceId) {
+    // Deduplicate in case an element is matched by both selectors
+    const arcs = [...new Set([...document.querySelectorAll(
+      `[data-source="${sourceId}"] .progress-ring__arc, #section-${sourceId} .progress-ring__arc`
+    )])];
+    if (!arcs.length) return;
+    ringTweens[sourceId] = gsap.to(arcs, {
+      rotation: 360,
+      duration: 1,
+      repeat: -1,
+      ease: 'none',
+      transformOrigin: '50% 50%',
+    });
+    // Pulse the arc length for a lively feel — short↔long, total stays ~82 (circumference r=13)
+    ringTweens[sourceId + '_pulse'] = gsap.fromTo(arcs,
+      { attr: { 'stroke-dasharray': '10 72' } },
+      { attr: { 'stroke-dasharray': '48 34' }, duration: 0.85, ease: 'sine.inOut', repeat: -1, yoyo: true }
+    );
+  }
+
+  function stopRing(sourceId) {
+    if (ringTweens[sourceId]) {
+      ringTweens[sourceId].kill();
+      delete ringTweens[sourceId];
+    }
+    if (ringTweens[sourceId + '_pulse']) {
+      ringTweens[sourceId + '_pulse'].kill();
+      delete ringTweens[sourceId + '_pulse'];
+    }
+    const rings = [...new Set([...document.querySelectorAll(
+      `[data-source="${sourceId}"] .progress-ring, #section-${sourceId} .progress-ring`
+    )])];
+    if (rings.length) gsap.to(rings, { opacity: 0, duration: 0.3 });
+  }
+
+  function revealSection(sectionId) {
+    gsap.to(`#${sectionId}`, {
+      opacity: 1,
+      y: 0,
+      duration: 0.4,
+      ease: 'power2.out',
+      visibility: 'visible',
+    });
+  }
+
+  function startSearchAnimation() {
+    resetAll();
+
+    startRing('dynatrace');
+    startRing('servicenow');
+    startRing('vmwvrops');
+
+    masterTl = gsap.timeline();
+
+    // T = 1.5s — Dynatrace done
+    masterTl.add(() => {
+      stopRing('dynatrace');
+      setStatusText('dynatrace', '6 a-types', false);
+      revealSection('section-dynatrace');
+    }, 1.5);
+
+    // T = 1.5s — VMW VROPS done
+    masterTl.add(() => {
+      stopRing('vmwvrops');
+      setStatusText('vmwvrops', '8 b-types', false);
+      revealSection('section-vmwvrops');
+    }, 1.5);
+
+    // T = 1.5s — ServiceNow: 1 exact match, still deep searching
+    masterTl.add(() => {
+      setStatusText('servicenow', '1 found \u00b7 Deep searching for related results', true);
+      revealSection('section-servicenow');
+    }, 1.5);
+
+    // T = 15s — ServiceNow: sweep stops, "Stop searching" link appears
+    masterTl.add(() => {
+      setStatusText('servicenow', '1 found \u00b7 Deep searching for related results', false);
+      gsap.set('.stop-searching-link', { display: 'inline', opacity: 0 });
+      gsap.to('.stop-searching-link', {
+        opacity: 1,
+        duration: 0.3,
+        ease: 'power1.out',
+        onComplete: () => {
+          document.querySelectorAll('.stop-searching-link')
+            .forEach(el => el.style.pointerEvents = 'auto');
+        },
+      });
+    }, 15);
+  }
+
+  function stopSearching() {
+    if (masterTl) masterTl.kill();
+    stopRing('servicenow');
+    // Chip: show final count; section title: restore to plain "ServiceNow"
+    document.querySelectorAll('[data-source="servicenow"] .status-text').forEach(el => {
+      el.textContent = '1 found';
+      el.classList.replace('sweeping', 'static');
+    });
+    document.querySelectorAll('#section-servicenow .section-status-text').forEach(el => {
+      el.textContent = 'ServiceNow';
+      el.classList.replace('sweeping', 'static');
+    });
+    gsap.to('.stop-searching-link', {
+      opacity: 0,
+      duration: 0.2,
+      onComplete: () => {
+        document.querySelectorAll('.stop-searching-link')
+          .forEach(el => { el.style.pointerEvents = 'none'; el.style.display = 'none'; });
+      },
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('#search-btn').addEventListener('click', startSearchAnimation);
+
+    // Event delegation — stopPropagation prevents triggering toggleSection on the header
+    document.addEventListener('click', e => {
+      if (e.target.classList.contains('stop-searching-link')) {
+        e.stopPropagation();
+        stopSearching();
+      }
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+/* ============================================================
+   DevAI NEO — Design Tokens
+   CSS custom properties only: color, type scale, spacing,
+   radii, elevation. No selectors beyond :root / theme roots.
+   Load FIRST, before base.css and components.css.
+   ============================================================ */
+
+/* ---------- Web fonts ---------- */
+/* Source Sans 3 is a drop-in upgrade for the Figma's "Source Sans Pro".
+   If your local project already self-hosts a font, swap this @import
+   for a local @font-face and keep the --font-sans variable name. */
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+
+:root {
+  /* ========== BRAND / ACCENT ========== */
+  --neo-indigo:            rgb(98, 113, 235);   /* primary — search highlight, active tab bg */
+  --neo-indigo-600:        rgb(95, 111, 222);   /* hover/pressed */
+  --neo-indigo-50:         rgb(239, 239, 251);  /* active-tab fill / subtle bg */
+  --neo-indigo-100:        rgb(223, 219, 239);  /* card border */
+  --neo-indigo-200:        rgb(216, 216, 238);  /* dividers */
+  --neo-indigo-light-100:  rgb(236, 240, 252);  /* info-chip fill */
+  --neo-indigo-light-200:  rgb(214, 228, 255);  /* cooler fill */
+  --neo-indigo-hair:       rgb(186, 190, 227);  /* hairline border around chips */
+  --neo-lilac:             rgb(248, 239, 255);  /* connect-pill background */
+  --neo-violet-text:       rgb(81, 64, 144);    /* purple label text */
+
+  --neo-link:              rgb(8, 118, 245);    /* link blue */
+  --neo-link-bg:           rgb(210, 228, 253);
+
+  /* ========== NEUTRALS (foreground) ========== */
+  --neo-fg-1:              rgb(6, 0, 26);       /* primary text (near-black, cool tint) */
+  --neo-fg-2:              rgb(74, 82, 107);    /* secondary text / icon dark */
+  --neo-fg-3:              rgb(121, 121, 144);  /* placeholder / tertiary */
+  --neo-fg-4:              rgb(166, 168, 189);  /* meta / captions */
+  --neo-fg-5:              rgb(165, 179, 205);  /* borders on buttons */
+
+  /* ========== NEUTRALS (backgrounds) ========== */
+  --neo-bg:                rgb(250, 251, 255);  /* section panel fill (faint cool-white) */
+  --neo-bg-2:              rgb(245, 247, 250);  /* row zebra / soft surface */
+  --neo-bg-3:              rgb(244, 249, 255);  /* even softer bluish */
+  --neo-surface:           rgb(255, 255, 255);  /* card & panel surface */
+  --neo-border:            rgb(238, 241, 246);  /* hairline divider */
+  --neo-border-2:          rgb(241, 240, 240);  /* ghost button border */
+
+  /* Radial app background (login + secondary pages) */
+  --neo-app-bg: radial-gradient(rgb(251,252,253) 0%, rgb(228,236,250) 100%);
+
+  /* ========== SEMANTIC ========== */
+  --neo-success:           rgb(148, 236, 130);  /* bar / health dot */
+  --neo-success-2:         rgb(98, 216, 78);    /* ServiceNow agent green */
+  --neo-warning:           rgb(248, 227, 137);  /* yellow highlight */
+  --neo-danger:            rgb(233, 95, 53);    /* warning icon orange */
+  --neo-danger-2:          rgb(236, 33, 56);    /* notification badge red */
+  --neo-pink:              rgb(255, 221, 238);  /* discrepancy row fill */
+  --neo-pink-2:            rgb(255, 245, 251);  /* softer pink surface */
+  --neo-teal:              rgb(50, 199, 169);   /* connector dot teal */
+  --neo-mint-100:          rgb(172, 242, 230);  /* avatar gradient start */
+  --neo-lavender-100:      rgb(178, 213, 255);  /* avatar gradient mid */
+  --neo-purple-100:        rgb(193, 143, 243);  /* avatar gradient end */
+
+  /* ========== SPACING (4px grid) ========== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ========== RADII ========== */
+  --radius-xs: 2px;   /* tab indicator */
+  --radius-sm: 4px;   /* buttons, chips */
+  --radius-md: 8px;   /* cards, inputs */
+  --radius-lg: 12px;  /* avatar, large surfaces */
+  --radius-pill: 999px;
+
+  /* ========== ELEVATION ========== */
+  --shadow-1: 0px 1px 2px 0px rgba(170, 173, 209, 0.30);
+  --shadow-2: 0px 2px 6px 2px rgba(170, 173, 209, 0.15), 0px 1px 2px 0px rgba(170, 173, 209, 0.30);
+  --shadow-3: 0px 8px 24px rgba(95, 111, 222, 0.12), 0px 2px 6px rgba(170, 173, 209, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(98, 113, 235, 0.25);
+
+  /* ========== TYPE — Families ========== */
+  --font-sans: "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ========== TYPE — Base scale (px, matches Figma) ========== */
+  --text-xs:   12px;  /* tables, meta, chips */
+  --text-sm:   14px;  /* body, nav labels, dense body */
+  --text-md:   16px;  /* section titles, product name */
+  --text-lg:   20px;  /* card numbers */
+  --text-xl:   24px;  /* h2 */
+  --text-2xl:  28px;  /* h1 / search result emphasis */
+  --text-3xl:  32px;  /* hero */
+  --text-4xl:  48px;  /* display */
+
+  /* line-heights — Figma uses 100% line-height almost everywhere (data UI) */
+  --lh-tight: 100%;
+  --lh-snug:  120%;
+  --lh-body:  150%;
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   DARK THEME TOKENS — present for future use.
+   NOT wired up in this implementation pass (light theme only
+   per current scope). Kept in sync here so a later dark-mode
+   pass is a drop-in: same variable names, remapped values.
+
+   Activation when adopted:
+     <html data-theme="dark">   → force dark
+     <html data-theme="light">  → force light
+     (no attribute)             → follow OS via prefers-color-scheme
+   ============================================================ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --neo-indigo: rgb(124, 138, 255);
+  --neo-indigo-600: rgb(146, 158, 255);
+  --neo-indigo-50: rgb(38, 41, 66);
+  --neo-indigo-100: rgb(48, 51, 76);
+  --neo-indigo-200: rgb(55, 58, 84);
+  --neo-indigo-light-100: rgb(40, 44, 72);
+  --neo-indigo-light-200: rgb(44, 54, 92);
+  --neo-indigo-hair: rgb(68, 72, 106);
+  --neo-lilac: rgb(48, 40, 68);
+  --neo-violet-text: rgb(198, 186, 246);
+  --neo-link: rgb(96, 172, 255);
+  --neo-link-bg: rgb(28, 50, 84);
+  --neo-fg-1: rgb(237, 239, 248);
+  --neo-fg-2: rgb(178, 184, 205);
+  --neo-fg-3: rgb(133, 138, 161);
+  --neo-fg-4: rgb(107, 111, 135);
+  --neo-fg-5: rgb(92, 98, 125);
+  --neo-bg: rgb(24, 26, 37);
+  --neo-bg-2: rgb(38, 41, 56);
+  --neo-bg-3: rgb(25, 29, 44);
+  --neo-surface: rgb(32, 34, 48);
+  --neo-border: rgb(44, 47, 65);
+  --neo-border-2: rgb(48, 51, 68);
+  --neo-app-bg: radial-gradient(rgb(28, 30, 46) 0%, rgb(12, 13, 20) 100%);
+  --neo-success: rgb(140, 230, 122);
+  --neo-success-2: rgb(98, 216, 78);
+  --neo-warning: rgb(240, 214, 110);
+  --neo-danger: rgb(255, 122, 86);
+  --neo-danger-2: rgb(255, 92, 112);
+  --neo-pink: rgb(60, 31, 46);
+  --neo-pink-2: rgb(46, 27, 39);
+  --neo-teal: rgb(58, 210, 180);
+  --shadow-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.50);
+  --shadow-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.40), 0px 1px 2px 0px rgba(0, 0, 0, 0.55);
+  --shadow-3: 0px 10px 30px rgba(0, 0, 0, 0.55), 0px 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-focus: 0 0 0 3px rgba(124, 138, 255, 0.40);
+}

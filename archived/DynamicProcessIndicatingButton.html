@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProcessingIndicatingButton</title>
+
+    <!-- Import ProcessingButton component styles -->
+    <link rel="stylesheet" href="ProcessingButton.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .split-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .half {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dark {
+            background-color: #1e1e1e;
+        }
+
+        .bright {
+            background-color: #ffffff;
+        }
+
+    </style>
+
+    <!-- GSAP Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/DrawSVGPlugin.min.js"></script>
+
+    <!-- Import ProcessingButton component -->
+    <script src="ProcessingButton.js"></script>
+</head>
+<body>
+    <div class="split-container">
+        <div class="half dark">
+            <!-- ProcessingButton component will populate this -->
+            <div id="button1"></div>
+        </div>
+        <div class="half bright">
+            <!-- ProcessingButton component will populate this -->
+            <div id="button2"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize when DOM is ready
+        document.addEventListener("DOMContentLoaded", () => {
+            gsap.registerPlugin(DrawSVGPlugin);
+
+            // Create processing buttons using the component
+            const button1 = new ProcessingButton(document.getElementById('button1'));
+            const button2 = new ProcessingButton(document.getElementById('button2'));
+
+            // Example: Custom configuration
+            // const customButton = new ProcessingButton(element, {
+            //     label: 'Custom Label',
+            //     defaultIcon: 'path/to/icon.svg',
+            //     onStart: (btn) => console.log('Started processing'),
+            //     onStop: (btn) => console.log('Stopped processing')
+            // });
+        });
+    </script>
+
+</body>
+</html>

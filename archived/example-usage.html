@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProcessingButton - Usage Examples</title>
+
+    <!-- Import component styles -->
+    <link rel="stylesheet" href="ProcessingButton.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+
+        .example-section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .example-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background: #f0f0f0;
+        }
+    </style>
+
+    <!-- GSAP Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/DrawSVGPlugin.min.js"></script>
+
+    <!-- Import component -->
+    <script src="ProcessingButton.js"></script>
+</head>
+<body>
+    <h1 style="margin-bottom: 30px;">ProcessingButton Component - Usage Examples</h1>
+
+    <!-- Example 1: Basic Usage -->
+    <div class="example-section">
+        <h2>1. Basic Usage (Auto-toggle on click)</h2>
+        <div class="button-container">
+            <div id="basic-button"></div>
+        </div>
+        <pre><code>const button = new ProcessingButton(document.getElementById('basic-button'));</code></pre>
+    </div>
+
+    <!-- Example 2: Custom Options -->
+    <div class="example-section">
+        <h2>2. Custom Label and Icons</h2>
+        <div class="button-container">
+            <div id="custom-button"></div>
+        </div>
+        <pre><code>const button = new ProcessingButton(element, {
+    label: 'Generate Report',
+    defaultIcon: 'img/GenAI.svg',
+    endIcon: 'img/Arrow-down.svg'
+});</code></pre>
+    </div>
+
+    <!-- Example 3: Manual Control -->
+    <div class="example-section">
+        <h2>3. Manual Control (No auto-toggle)</h2>
+        <div class="button-container">
+            <div id="manual-button"></div>
+        </div>
+        <div class="controls">
+            <button onclick="manualButton.start()">Start</button>
+            <button onclick="manualButton.stop()">Stop</button>
+            <button onclick="manualButton.toggle()">Toggle</button>
+        </div>
+        <pre><code>const button = new ProcessingButton(element, {
+    autoToggle: false
+});
+
+// Manual control
+button.start();  // Start animation
+button.stop();   // Stop animation
+button.toggle(); // Toggle state</code></pre>
+    </div>
+
+    <!-- Example 4: With Callbacks -->
+    <div class="example-section">
+        <h2>4. With Event Callbacks</h2>
+        <div class="button-container">
+            <div id="callback-button"></div>
+        </div>
+        <div id="callback-log" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 4px; min-height: 40px;">
+            <strong>Log:</strong> <span id="log-content">Click the button to see events...</span>
+        </div>
+        <pre><code>const button = new ProcessingButton(element, {
+    label: 'Process Data',
+    onStart: (btn) => {
+        console.log('Processing started');
+        // Your async operation here
+    },
+    onStop: (btn) => {
+        console.log('Processing stopped');
+    }
+});</code></pre>
+    </div>
+
+    <!-- Example 5: Multiple Buttons -->
+    <div class="example-section">
+        <h2>5. Multiple Buttons</h2>
+        <div class="button-container">
+            <div id="multi-button-1"></div>
+            <div id="multi-button-2"></div>
+            <div id="multi-button-3"></div>
+        </div>
+        <pre><code>// Create multiple independent buttons
+const buttons = ['button1', 'button2', 'button3'].map((id, index) => {
+    return new ProcessingButton(document.getElementById(id), {
+        label: `Task ${index + 1}`
+    });
+});</code></pre>
+    </div>
+
+    <!-- Example 6: Programmatic Control -->
+    <div class="example-section">
+        <h2>6. Programmatic Updates</h2>
+        <div class="button-container">
+            <div id="update-button"></div>
+        </div>
+        <div class="controls">
+            <button onclick="updateButton.setLabel('Updated Label')">Change Label</button>
+            <button onclick="alert('Is Active: ' + updateButton.isActive())">Check Status</button>
+        </div>
+        <pre><code>button.setLabel('New Label');   // Update label
+button.isActive();              // Check if processing
+button.destroy();               // Cleanup and destroy</code></pre>
+    </div>
+
+    <script>
+        // Initialize GSAP plugin
+        gsap.registerPlugin(DrawSVGPlugin);
+
+        // Example 1: Basic Usage
+        const basicButton = new ProcessingButton(document.getElementById('basic-button'));
+
+        // Example 2: Custom Options
+        const customButton = new ProcessingButton(document.getElementById('custom-button'), {
+            label: 'Generate Report'
+        });
+
+        // Example 3: Manual Control
+        const manualButton = new ProcessingButton(document.getElementById('manual-button'), {
+            label: 'Manual Control',
+            autoToggle: false
+        });
+
+        // Example 4: With Callbacks
+        const callbackButton = new ProcessingButton(document.getElementById('callback-button'), {
+            label: 'Process Data',
+            onStart: (btn) => {
+                document.getElementById('log-content').textContent = 'Processing started at ' + new Date().toLocaleTimeString();
+            },
+            onStop: (btn) => {
+                document.getElementById('log-content').textContent = 'Processing stopped at ' + new Date().toLocaleTimeString();
+            }
+        });
+
+        // Example 5: Multiple Buttons
+        const multiButtons = [
+            new ProcessingButton(document.getElementById('multi-button-1'), { label: 'Task 1' }),
+            new ProcessingButton(document.getElementById('multi-button-2'), { label: 'Task 2' }),
+            new ProcessingButton(document.getElementById('multi-button-3'), { label: 'Task 3' })
+        ];
+
+        // Example 6: Programmatic Updates
+        const updateButton = new ProcessingButton(document.getElementById('update-button'), {
+            label: 'Original Label'
+        });
+    </script>
+</body>
+</html>

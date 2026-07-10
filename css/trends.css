@@ -1,0 +1,153 @@
+/* ============================================================
+   Trends page — layout, topbar, tabs, range pills, chart cards
+   ============================================================ */
+
+html, body {
+  background: var(--neo-app-bg);
+  color: var(--neo-fg-1);
+  font-size: var(--text-sm);
+  min-height: 100vh;
+}
+body {
+  padding: 24px 16px 48px;
+  display: flex;
+  justify-content: center;
+}
+.page {
+  width: 760px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ===================== TOP BAR ===================== */
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 2px 4px 0;
+}
+.topbar .current-label {
+  font-size: 14px;
+  color: var(--neo-fg-2);
+  line-height: 28px;
+  flex-shrink: 0;
+}
+.source-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 8px 0 6px;
+  background: var(--neo-surface);
+  border: 1px solid var(--neo-indigo-hair);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--neo-fg-1);
+}
+.chip img { flex-shrink: 0; }
+.chip .gear { color: var(--neo-fg-3); display: inline-grid; place-items: center; cursor: pointer; }
+.chip .gear:hover { color: var(--neo-fg-1); }
+
+.switch {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 30px;
+  color: var(--neo-indigo);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  background: none; border: none; font-family: inherit;
+}
+.switch:hover { color: var(--neo-indigo-600); }
+
+.live-wrap { margin-left: auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.live-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  background: #E7F8E1;
+  border: 1px solid #BCE8AE;
+  border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 700; color: #2A7A1A;
+}
+.live-badge .dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: #2A7A1A;
+  box-shadow: 0 0 0 0 rgba(42,122,26,.5);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(42,122,26,.45); }
+  70%  { box-shadow: 0 0 0 6px rgba(42,122,26,0); }
+  100% { box-shadow: 0 0 0 0 rgba(42,122,26,0); }
+}
+.live-badge .sep { opacity: .55; font-weight: 400; }
+.live-badge .info { color: #2A7A1A; opacity: .7; display: inline-grid; place-items: center; }
+.next-audit { font-size: 12px; color: var(--neo-fg-4); }
+
+/* ===================== TABS ===================== */
+.tabs {
+  display: flex; gap: 22px;
+  border-bottom: 1px solid var(--neo-indigo-100);
+  padding: 0 4px;
+}
+.tabs button {
+  border: none; background: transparent; cursor: pointer;
+  font: inherit;
+  font-size: 15px; font-weight: 600;
+  color: var(--neo-fg-3);
+  padding: 8px 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+.tabs button.active { color: var(--neo-indigo); border-bottom-color: var(--neo-indigo); font-weight: 700; }
+.tabs button:hover { color: var(--neo-fg-1); }
+.tabs button.active:hover { color: var(--neo-indigo); }
+
+/* ===================== RANGE PILLS ===================== */
+.ranges { display: flex; gap: 8px; padding: 2px 4px; flex-wrap: wrap; }
+.range-btn {
+  border: 1px solid var(--neo-indigo-hair);
+  background: var(--neo-surface);
+  border-radius: var(--radius-sm);
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--neo-fg-2);
+  padding: 6px 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+.range-btn:hover { border-color: var(--neo-indigo); color: var(--neo-fg-1); }
+.range-btn.active {
+  background: var(--neo-indigo);
+  color: #fff;
+  border-color: var(--neo-indigo);
+}
+.range-btn.active:hover { color: #fff; }
+
+/* ===================== CHART CARD ===================== */
+.chart-card {
+  background: var(--neo-surface);
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+  padding: 16px 18px 10px;
+}
+.chart-card.pink { background: var(--neo-pink-2); border-color: var(--neo-pink); }
+.chart-card.blue { background: var(--neo-bg-3); border-color: var(--neo-indigo-100); }
+.chart-card .ct {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: var(--neo-fg-1);
+  margin-bottom: 4px;
+}
+.chart-card .ct .swatch {
+  width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0;
+}
+.chart-mount svg { display: block; width: 100%; height: auto; }
+
+/* chart text */
+.gridline { stroke: var(--neo-border); stroke-width: 1; stroke-dasharray: 2 4; }
+.baseline { stroke: var(--neo-fg-5); stroke-width: 1; opacity: .6; }
+.ylabel { fill: var(--neo-fg-3); font-size: 11px; font-family: var(--font-sans); }
+.vlabel { fill: var(--neo-fg-2); font-size: 10px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; text-anchor: middle; font-weight: 500; }
+.vlabel.hl { fill: var(--neo-fg-1); font-weight: 700; }

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="'UTF-8'" />
+        <title>GSAP-PracticeWithControls</title>
+        <link rel="stylesheet" href="CSS/styles.css" />
+        <style>
+            body {
+                display:flex;
+                align-items: center;
+                justify-content: space-around;
+                min-height: 100vh;
+                flex-direction: column;
+                background-color: black;
+            }
+            
+        </style>
+    </head>
+
+    <body>
+        <script src="JS/gsap.min.js"></script>
+       
+        <div class="container">
+            <div class="box gradient-green"></div>
+            <div class="nav light">
+                <button id="play">Play</button>
+                <button id="pause">Pause</button>
+                <button id="resume">Resume</button>
+                <button id="reverse">Reverse</button>
+                <button id="restart">Restart</button>
+            </div>
+        </div>
+
+        <script>
+            let nav = document.querySelector('.nav')
+
+            let tween = gsap.to(".box",{
+                duration:2,
+                x:() => nav.offsetWidth,
+                xPercent:-100,
+                rotation:360,
+                ease:"power1.out",
+                pause:true,
+            });
+
+            document.querySelector("#play").onclick = () => tween.play();
+            document.querySelector("#pause").onclick = () => tween.pause();
+            document.querySelector("#resume").onclick = () => tween.resume();
+            document.querySelector("#reverse").onclick = () => tween.reverse();
+            document.querySelector("#restart").onclick = () => tween.restart();
+
+        </script>
+
+
+    </body>
+</html>

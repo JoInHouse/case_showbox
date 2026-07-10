@@ -1,0 +1,201 @@
+/* ============================================================
+   DevAI NEO — Foundations
+   Colors, typography, spacing, shadows, radii.
+   Source of truth: ReferenceUIMockups.fig (Figma) metadata
+   ============================================================ */
+
+:root {
+  /* ========== BRAND / ACCENT ========== */
+  --neo-indigo:            rgb(98, 113, 235);   /* primary — search highlight, active tab bg */
+  --neo-indigo-600:        rgb(95, 111, 222);   /* hover/pressed */
+  --neo-indigo-50:         rgb(239, 239, 251);  /* active-tab fill / subtle bg */
+  --neo-indigo-100:        rgb(223, 219, 239);  /* card border */
+  --neo-indigo-200:        rgb(216, 216, 238);  /* dividers */
+  --neo-indigo-light-100:  rgb(236, 240, 252);  /* info-chip fill */
+  --neo-indigo-light-200:  rgb(214, 228, 255);  /* cooler fill */
+  --neo-indigo-hair:       rgb(186, 190, 227);  /* hairline border around chips */
+  --neo-lilac:             rgb(248, 239, 255);  /* connect-pill background */
+  --neo-violet-text:       rgb(81, 64, 144);    /* purple label text */
+
+  --neo-link:              rgb(8, 118, 245);    /* link blue */
+  --neo-link-bg:           rgb(210, 228, 253);
+
+  /* ========== NEUTRALS (foreground) ========== */
+  --neo-fg-1:              rgb(6, 0, 26);       /* primary text (near-black with cool tint) */
+  --neo-fg-2:              rgb(74, 82, 107);    /* secondary text / icon dark */
+  --neo-fg-3:              rgb(121, 121, 144);  /* placeholder / tertiary */
+  --neo-fg-4:              rgb(166, 168, 189);  /* meta / captions */
+  --neo-fg-5:              rgb(165, 179, 205);  /* borders on buttons */
+
+  /* ========== NEUTRALS (backgrounds) ========== */
+  --neo-bg:                rgb(250, 251, 255);  /* section panel fill (faint cool-white) */
+  --neo-bg-2:              rgb(245, 247, 250);  /* row zebra / soft surface */
+  --neo-bg-3:              rgb(244, 249, 255);  /* even softer bluish */
+  --neo-surface:           rgb(255, 255, 255);  /* card & panel surface */
+  --neo-border:            rgb(238, 241, 246);  /* hairline divider */
+  --neo-border-2:          rgb(241, 240, 240);  /* ghost button border */
+
+  /* Radial app background (login + secondary pages) */
+  --neo-app-bg: radial-gradient(rgb(251,252,253) 0%, rgb(228,236,250) 100%);
+
+  /* ========== SEMANTIC ========== */
+  --neo-success:           rgb(148, 236, 130);  /* bar / health dot */
+  --neo-success-2:         rgb(98, 216, 78);    /* ServiceNow agent green */
+  --neo-warning:           rgb(248, 227, 137);  /* yellow highlight */
+  --neo-danger:            rgb(233, 95, 53);    /* warning icon orange */
+  --neo-danger-2:          rgb(236, 33, 56);    /* notification badge red */
+  --neo-pink:              rgb(255, 221, 238);  /* discrepancy row fill */
+  --neo-pink-2:            rgb(255, 245, 251);  /* softer pink surface */
+  --neo-teal:              rgb(50, 199, 169);   /* connector dot teal */
+  --neo-mint-100:          rgb(172, 242, 230);  /* avatar gradient start */
+  --neo-lavender-100:      rgb(178, 213, 255);  /* avatar gradient mid */
+  --neo-purple-100:        rgb(193, 143, 243);  /* avatar gradient end */
+
+  /* ========== SPACING (4px grid) ========== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ========== RADII ========== */
+  --radius-xs: 2px;   /* tab indicator */
+  --radius-sm: 4px;   /* buttons, chips */
+  --radius-md: 8px;   /* cards, inputs */
+  --radius-lg: 12px;  /* avatar, large surfaces */
+  --radius-pill: 999px;
+
+  /* ========== ELEVATION ========== */
+  --shadow-1: 0px 1px 2px 0px rgba(170, 173, 209, 0.30);
+  --shadow-2: 0px 2px 6px 2px rgba(170, 173, 209, 0.15), 0px 1px 2px 0px rgba(170, 173, 209, 0.30);
+  --shadow-3: 0px 8px 24px rgba(95, 111, 222, 0.12), 0px 2px 6px rgba(170, 173, 209, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(98, 113, 235, 0.25);
+
+  /* ========== TYPE — Families ========== */
+  --font-sans: "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ========== TYPE — Base scale (px-based, matches Figma) ========== */
+  --text-xs:   12px;  /* tables, meta, chips */
+  --text-sm:   14px;  /* body, nav labels, dense body (14.4px in Figma rounded to 14) */
+  --text-md:   16px;  /* section titles, product name */
+  --text-lg:   20px;  /* card numbers */
+  --text-xl:   24px;  /* h2 */
+  --text-2xl:  28px;  /* h1 search result emphasis */
+  --text-3xl:  32px;  /* hero */
+  --text-4xl:  48px;  /* display */
+
+  /* line-heights — Figma uses 100% line-height almost everywhere for data UI */
+  --lh-tight: 100%;
+  --lh-snug:  120%;
+  --lh-body:  150%;
+}
+
+/* ---------- Global resets + base type ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
+  color: var(--neo-fg-1);
+  background: var(--neo-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11"; /* tabular feel on numbers */
+}
+
+/* ---------- Semantic elements ---------- */
+h1, .neo-h1 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: var(--text-2xl);
+  line-height: var(--lh-tight);
+  color: var(--neo-indigo);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+h2, .neo-h2 {
+  font-weight: 700;
+  font-size: var(--text-xl);
+  line-height: var(--lh-snug);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+h3, .neo-h3 {
+  font-weight: 700;
+  font-size: var(--text-md);
+  line-height: var(--lh-tight);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+h4, .neo-h4 {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  line-height: var(--lh-tight);
+  color: var(--neo-fg-1);
+  margin: 0;
+}
+
+p, .neo-body {
+  font-size: var(--text-sm);
+  color: var(--neo-fg-2);
+  line-height: var(--lh-body);
+  margin: 0;
+}
+.neo-body-dense {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-1);
+  line-height: var(--lh-tight);
+}
+
+.neo-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--neo-fg-1);
+  line-height: var(--lh-tight);
+}
+.neo-meta {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-4);
+  line-height: var(--lh-tight);
+}
+.neo-caption {
+  font-size: var(--text-xs);
+  color: var(--neo-fg-3);
+}
+.neo-link-text {
+  color: var(--neo-link);
+  text-decoration: none;
+  cursor: pointer;
+}
+.neo-link-text:hover { text-decoration: underline; }
+
+code, kbd, .neo-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--neo-fg-1);
+}
+
+/* ---------- Data-UI primitives ---------- */
+.neo-card {
+  background: var(--neo-surface);
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+}
+.neo-panel {
+  background: var(--neo-bg);
+  border-radius: var(--radius-md);
+}
+.neo-divider {
+  height: 1px;
+  background: var(--neo-border);
+  border: none;
+}

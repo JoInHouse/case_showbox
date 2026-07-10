@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Path Growth</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .base-path {
+            stroke: #3C3F58;
+            stroke-width: 1px;
+        }
+
+        /* Glowing splines that move along paths */
+        .glow-spline {
+            fill: none;
+            stroke-dasharray: 2000 2000;
+            stroke-linecap: round;
+            stroke-dashoffset: 2000;
+            animation: moveSpline 4s ease-in-out infinite;
+        }
+        
+        .glow-spline.reversed {
+            stroke-dashoffset: -2000;
+            animation: moveSpline 10s ease-out infinite;
+        }
+
+  /* Different colors for splines */        
+        .spline-1 { stroke: url(#spline-gradient-1); stroke-width: 3px;filter: url(#glow-1);}
+        .spline-2 { stroke: url(#spline-gradient-2); stroke-width: 1px;filter: url(#glow-2);}
+        .spline-3 { stroke: url(#spline-gradient-3); stroke-width: 2px;filter: url(#glow-3);}
+        .spline-4 { stroke: url(#spline-gradient-4); stroke-width: 2px;filter: url(#glow-4);}
+        .spline-5 { stroke: url(#spline-gradient-5); stroke-width: 3px;filter: url(#glow-5);}
+        .spline-6 { stroke: url(#spline-gradient-6); stroke-width: 3px;filter: url(#glow-6);}
+        .spline-7 { stroke: url(#spline-gradient-7); stroke-width: 2px;filter: url(#glow-7);}
+        .spline-8 { stroke: url(#spline-gradient-8); stroke-width: 3px;filter: url(#glow-8);}
+        .spline-9 { stroke: url(#spline-gradient-9); stroke-width: 4px;filter: url(#glow-9);}
+        .spline-10 { stroke: url(#spline-gradient-10); stroke-width: 1px;filter: url(#glow-10);}
+
+        .spline-11 { stroke: url(#spline-gradient-11); stroke-width: 2px;filter: url(#glow-10);}
+
+        @keyframes moveSpline {
+            0% {
+                stroke-dashoffset: 2000;
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                stroke-dashoffset: -1200;
+                opacity: 0;
+            }
+        }
+
+        /* Stagger the spline animations */
+        .spline-1 { animation-delay: 0.5s; }
+        .spline-2 { animation-delay: 1s; }
+        .spline-3 { animation-delay: 1.5s; }
+        .spline-4 { animation-delay: 2s; }
+        .spline-5 { animation-delay: 2.5s; }
+        .spline-6 { animation-delay: 3s; }
+        .spline-7 { animation-delay: 3.5s; }
+        .spline-8 { animation-delay: 4s; }
+        .spline-9 { animation-delay: 4.5s; }
+        .spline-10 { animation-delay: 5s; }
+        
+        .delay-0 { animation-delay: 0.4s; }
+        .delay-1 { animation-delay: 0.8s; }
+        .delay-2 { animation-delay: 1.2s; }
+
+
+        /* Enhanced glow effects */
+        .enhanced-glow {
+            filter: 
+                drop-shadow(0 0 4px currentColor) 
+                drop-shadow(0 0 8px currentColor) 
+                drop-shadow(0 0 16px currentColor) 
+                drop-shadow(0 0 32px currentColor);
+        }
+    </style>
+</head>
+<body>
+    <svg width="1980" height="767" viewBox="0 0 1980 767" fill="none">
+        <defs>
+            <!-- Spline gradients with transparent ends -->
+            <linearGradient id="spline-gradient-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-3" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-4" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-5" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-6" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-7" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-8" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-9" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-10" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="spline-gradient-11" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                <stop offset="50%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+            </linearGradient>            
+
+            <!-- SVG Filters for color-based outglow effects -->
+            <filter id="glow-1" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.196
+                                                     0 0 0 0 0.780  
+                                                     0 0 0 0 0.663
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge> 
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-2" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.455
+                                                     0 0 0 0 0.639
+                                                     0 0 0 0 0.867
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-3" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.925
+                                                     0 0 0 0 0.498
+                                                     0 0 0 0 0.925
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-4" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.953
+                                                     0 0 0 0 0.608
+                                                     0 0 0 0 0.467
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-5" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.180
+                                                     0 0 0 0 0.412
+                                                     0 0 0 0 0.710
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-6" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.329
+                                                     0 0 0 0 0.776
+                                                     0 0 0 0 0.984
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-7" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.318
+                                                     0 0 0 0 0.992
+                                                     0 0 0 0 0.639
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-8" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.443
+                                                     0 0 0 0 0.408
+                                                     0 0 0 0 0.922
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-9" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.047
+                                                     0 0 0 0 0.631
+                                                     0 0 0 0 0.878
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            
+            <filter id="glow-10" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0.420
+                                                     0 0 0 0 0.906
+                                                     0 0 0 0 0.984
+                                                     0 0 0 1 0" result="glow"/>
+                <feMerge>
+                    <feMergeNode in="glow"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        
+        <!-- Glowing colored splines (animated) -->
+        <path class="glow-spline spline-1 enhanced-glow" d="M4.24805 262.363C88.8438 314.615 277.826 361.558 447.017 314.615C512.658 296.403 577.45 241.928 606.935 241.928C656.41 241.928 689.893 299.539 740.367 307.077C780.746 313.108 909.779 311.385 970.248 311.385"/>
+        <path class="glow-spline spline-2" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+        <path class="glow-spline spline-3" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+        <path class="glow-spline spline-4 enhanced-glow" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+        <path class="glow-spline spline-5" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+        <path class="glow-spline spline-6" d="M4 581C253.301 367 507.156 313 970 313"/>
+        <path class="glow-spline spline-7" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+        <path class="glow-spline spline-8 enhanced-glow" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+        <path class="glow-spline spline-9" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+        <path class="glow-spline spline-10" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+        <path class="glow-spline spline-7" d="M4 645.5C23.8333 681.667 73.9524 743.5 116 743.5C250 743.5 308.982 479.047 484 378C609.757 305.394 849.167 315.5 970.5 313"/>
+        <path class="glow-spline spline-5" d="M4 365C139.5 343.5 335.25 313 460 313C584.75 313 657 353 715.5 353C774 353 839 313 970.5 313"/>
+        <path class="glow-spline spline-5 enhanced-glow" d="M4 226C64.5 272.5 152.466 311 236.5 311C418 311 449.5 273 507.5 273C605.5 273 582.5 328 970.5 313"/>
+        <path class="glow-spline spline-8" d="M4 307.5C122.5 307.5 349 303.027 402.5 319.658C443 332.248 462.5 365 526 365C589.5 365 606 335.266 669.5 323.688C711.5 316.031 854 313 970.5 313"/>
+        
+        <!-- Gradient paths (animate second) -->
+        <path class="glow-spline spline-11 delay-2" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+        <path class="glow-spline spline-11" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+        <path class="glow-spline spline-11 delay-1" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+        <path class="glow-spline spline-11" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+        <path class="glow-spline spline-11" d="M972 313.135C1628.82 313.135 1508.24 470.135 1977 470.135" />
+        <path class="glow-spline spline-11 delay-0" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+        <path class="glow-spline spline-11 delay-2" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+        <path class="glow-spline spline-11 delay-0" d="M972 311.135C1628.82 311.135 1797 -91.3652 1977 125.135" />
+        <path class="glow-spline spline-11 delay-1" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+        <path class="glow-spline spline-11" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+
+    </svg>
+</body>
+</html>

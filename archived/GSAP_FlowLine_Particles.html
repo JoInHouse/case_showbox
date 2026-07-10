@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Line Flow with Particles</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .flow-line, .r-flow-line {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+        }
+
+        .basepath{
+            stroke-width:1px;
+            stroke-opacity: 0.5;
+            stroke:#181E50;
+            fill: none;
+        }
+
+        .energy-particle {
+            fill: #FFFF00;
+            opacity: 0;
+            filter: url(#particleGlow);
+        }
+
+        .comet-trail {
+            opacity: 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+    <svg width="1980" height="767" viewBox="0 0 1980 767" fill="none">
+        <defs>
+            <!-- Gradient definitions for each line -->
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient6" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient7" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient8" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient9" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient10" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+            </linearGradient>
+
+            <!-- Strong glow for particles -->
+            <filter id="particleGlow">
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+
+            <!-- Trail glow for comet effect -->
+            <filter id="trailGlow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        
+          <!-- basepath Set -->
+          <g id="basePaths">
+            <path class="basepath" d="M4.24805 261.363
+            C225 366.5 378.5 334 436.246 313.615
+            C493.993 293.23 556.121 240.928 606.247 240.928
+            C656.374 240.928 701.747 281.077 751 294
+            C800.253 306.923 909.5 312 970 312"/>
+            <path class="basepath" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+            <path class="basepath" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="basepath" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="basepath" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <path class="basepath" d="M4 581C253.301 367 507.156 313 970 313"/>
+            <path class="basepath" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+            <path class="basepath" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+            <path class="basepath" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <path class="basepath" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+            <path class="basepath" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+        </g>  
+
+        <!-- Flowlines Set -->
+        <g id="flowLines">
+            <path class="flow-line" id="path1" data-width="1.5" data-speed="2" stroke="url(#gradient1)" filter="url(#glow)" d="M4.24805 261.363
+            C225 366.5 378.5 334 436.246 313.615
+            C493.993 293.23 556.121 240.928 606.247 240.928
+            C656.374 240.928 701.747 281.077 751 294
+            C800.253 306.923 909.5 312 970 312" />
+            <path class="flow-line" id="path2" data-width="2" data-speed="2" stroke="url(#gradient2)" filter="url(#glow)" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+            <path class="flow-line" id="path3" data-width="1" data-speed="2.4" stroke="url(#gradient3)" filter="url(#glow)" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="flow-line" id="path4" data-width="1" data-speed="2.6" stroke="url(#gradient4)" filter="url(#glow)" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="flow-line" id="path5" data-width="2" data-speed="2.8" stroke="url(#gradient5)" filter="url(#glow)" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <path class="flow-line" id="path6" data-width="1.5" data-speed="3" stroke="url(#gradient6)" filter="url(#glow)" d="M4 581C253.301 367 507.156 313 970 313"/>
+            <path class="flow-line" id="path7" data-width="3" data-speed="2.2" stroke="url(#gradient7)" filter="url(#glow)" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+            <path class="flow-line" id="path8" data-width="2" data-speed="2" stroke="url(#gradient8)" filter="url(#glow)" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+            <path class="flow-line" id="path9" data-width="1" data-speed="1.6" stroke="url(#gradient9)" filter="url(#glow)" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <path class="flow-line" id="path10" data-width="3" data-speed="1.8" stroke="url(#gradient10)" filter="url(#glow)" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+        </g>
+
+        <!-- Comet particles with trails for each path -->
+        <g id="cometParticles"></g>
+        <g id="rightCometParticles"></g>
+        <!-- Right side flow lines -->
+        <g id="rightFlowLines">
+            <path class="r-flow-line" id="rpath1" data-speed="3" data-width="2" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+            <path class="r-flow-line" id="rpath2" data-speed="3" data-width="1" stroke="url(#gradient5)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+            <path class="r-flow-line" id="rpath3" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+            <path class="r-flow-line" id="rpath4" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+            <path class="r-flow-line" id="rpath5" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+            <path class="r-flow-line" id="rpath6" data-speed="3" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+            <path class="r-flow-line" id="rpath7" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+            <path class="r-flow-line" id="rpath8" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+        </g>
+
+
+    </svg>
+
+    <script>
+    // SHARED CONFIGURATION
+        const pathColors = [
+            '#25FFD3', '#A6CEFF', '#FFACFF', '#FFC1A7', '#5A99EA',
+            '#90DCFF', '#77FFB8', '#A59EFF', '#5FD0FF', '#82EEFF'
+        ];
+
+    // BASEPATH FADEOUT FUNCTION
+    function animateBasepathFadeout(flowPaths, basePaths,startIndex = 0) {
+        if (!flowPaths || !basePaths) return;
+        
+        flowPaths.forEach((flowPath, pathIndex) => {
+            if (!flowPath || !basePaths[startIndex + pathIndex]) return;
+            
+            const basePath = basePaths[startIndex + pathIndex];
+            const speed = parseFloat(flowPath.dataset.speed) || 2;
+            
+            // Create timeline for this specific basepath
+            const fadeTimeline = gsap.timeline({ 
+                delay: pathIndex * 2 // Same stagger delay as flow-line animation
+            });
+            
+            // Start fading out when the flow-line drawing begins
+            fadeTimeline.to(basePath, {
+                opacity: 0,
+                duration: speed * 0.8, // Fade out slightly faster than drawing
+                ease: "power2.out"
+            });
+            
+            // Ensure basepath stays invisible after fadeout
+            fadeTimeline.set(basePath, {
+                display: 'none'
+            });
+        });
+    }
+
+    // SHARED UTILITY FUNCTIONS
+    function createParticlesForPath(pathIndex, pathElement, containerSelector, particlePrefix) {
+            const cometContainer = document.querySelector(containerSelector);
+            const pathID = `${particlePrefix}${pathIndex + 1}`;
+            
+            // Create comet group
+            const cometGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            cometGroup.id = `comet_${pathID}`;
+            
+            // Create trail group
+            const trailGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            trailGroup.className = "comet-trail";
+            trailGroup.id = `trail_${pathID}`;
+            
+            // Create particle with path color
+            const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            particle.className = "energy-particle";
+            particle.id = `particle_${pathID}`;
+            particle.setAttribute("r", "3");
+            particle.setAttribute("fill", pathColors[pathIndex % pathColors.length]);
+            particle.style.visibility = "hidden";
+            
+            cometGroup.appendChild(trailGroup);
+            cometGroup.appendChild(particle);
+            cometContainer.appendChild(cometGroup);
+        }
+
+        function animateCometStream(path, particleId, pathColor) {
+            const particle = document.getElementById(`particle_${particleId}`);
+            const trailGroup = document.getElementById(`trail_${particleId}`);
+            if (!particle || !trailGroup) return;
+
+            const pathLength = path.getTotalLength();
+            const history = [];
+            const maxTrailLength = 8;
+            
+            // Make visible
+            gsap.set([particle, trailGroup], { opacity: 1 });
+            
+            // Animate along the path
+            gsap.to({}, {
+                duration: 3,
+                ease: "none",
+                onUpdate: function() {
+                    const progress = this.progress();
+                    const point = path.getPointAtLength(progress * pathLength);
+                    
+                    // Update particle position
+                    gsap.set(particle, {
+                        attr: { cx: point.x, cy: point.y }
+                    });
+                    
+                    // Add current position to history
+                    history.push({ x: point.x, y: point.y });
+                    if (history.length > maxTrailLength) {
+                        history.shift();
+                    }
+                    
+                    // Clear and redraw trail
+                    trailGroup.innerHTML = "";
+                    
+                    // Create trail circles with fading opacity
+                    history.forEach((pos, index) => {
+                        const alpha = (index + 1) / history.length * 0.6;
+                        const radius = 3 * ((index + 1) / history.length * 0.8 + 0.2);
+                        
+                        const trailCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                        trailCircle.setAttribute("cx", pos.x);
+                        trailCircle.setAttribute("cy", pos.y);
+                        trailCircle.setAttribute("r", radius);
+                        trailCircle.setAttribute("fill", pathColor);
+                        trailCircle.setAttribute("opacity", alpha);
+                        trailCircle.setAttribute("filter", "url(#trailGlow)");
+                        
+                        trailGroup.appendChild(trailCircle);
+                    });
+                },
+                onComplete: function() {
+                    // Hide particle and trail at the end
+                    gsap.set(particle, { opacity: 0 });
+                    gsap.set(trailGroup, { opacity: 0 });
+                    trailGroup.innerHTML = "";
+                }
+            });
+        }
+    
+        function animatePathDrawing(paths, particleContainer, particlePrefix) {
+            paths.forEach((path, pathIndex) => {
+                if (!path) return;
+                
+                // Create particles for this path
+                createParticlesForPath(pathIndex, path, particleContainer, particlePrefix);
+                
+                const pathLength = path.getTotalLength();
+                const speed = parseFloat(path.dataset.speed) || 2;
+                
+                // Initialize path as invisible
+                path.style.strokeDasharray = `0 ${pathLength}`;
+                
+                const timeline = gsap.timeline({ repeat: -1, delay: pathIndex * 2 });
+                    
+                // Phase 1: Draw the path
+                timeline.fromTo(path, 
+                    { strokeDasharray: `0 ${pathLength}` },
+                    { 
+                        strokeDasharray: `${pathLength} ${pathLength}`,
+                        duration: speed,
+                        ease: "power2.out"
+                    }
+                );
+                    
+                // Phase 2: Launch Comet particle
+                timeline.add(() => {
+                    const particleId = `${particlePrefix}${pathIndex + 1}`;
+                    animateCometStream(path, particleId, pathColors[pathIndex % pathColors.length]);
+                });
+                
+                timeline.to({}, { duration: 3 }); // Wait for comets to finish
+                    
+                // Phase 3: Shrink with forward flow
+                timeline.to(path, {
+                    strokeDasharray: `0 ${pathLength}`,
+                    strokeDashoffset: -pathLength,
+                    duration: 2,
+                    ease: "power2.in"
+                });
+                    
+                // Reset pause
+                timeline.to({}, { duration: 1 });
+            });
+        }
+
+        function addLineEffects(selector) {
+            const lines = document.querySelectorAll(selector);
+            
+            lines.forEach((line, index) => {
+                const strokeWidth = parseFloat(line.dataset.width) || 2;
+                const speed = parseFloat(line.dataset.speed) || 3;
+                
+                // Set initial styles
+                line.style.strokeWidth = strokeWidth + 'px';
+                
+                // Add slight pulsing to stroke width for organic feel
+                gsap.to(line, {
+                    strokeWidth: strokeWidth * 1.5,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.2
+                });
+                
+                // Add subtle opacity variation
+                gsap.to(line, {
+                    opacity: 0.3,
+                    duration: speed / 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut",
+                    delay: index * 0.15
+                });
+            });
+        }
+
+        // INITIALIZE ANIMATIONS
+        function initializeAnimations() {
+            // LEFT SIDE ANIMATIONS
+            const leftPaths = [
+                document.getElementById('path1'),
+                document.getElementById('path2'),
+                document.getElementById('path3'),
+                document.getElementById('path4'),                
+                document.getElementById('path5'),
+                document.getElementById('path6'),                
+                document.getElementById('path7'),
+                document.getElementById('path8'),                
+                document.getElementById('path9'),
+                document.getElementById('path10')
+            ];
+            
+            // Get basepaths in corresponding order
+            const leftBasePaths = document.querySelectorAll('#basePaths .basepath');
+            
+            // Start flow-line animations
+            animatePathDrawing(leftPaths, '#cometParticles', 'left');
+            addLineEffects('.flow-line');
+            
+            // Start synchronized basepath fadeout
+            animateBasepathFadeout(leftPaths, leftBasePaths,0);
+
+            // RIGHT SIDE ANIMATIONS - SAME EFFECTS!
+            const rightPaths = [
+                document.getElementById('rpath1'),
+                document.getElementById('rpath2'),
+                document.getElementById('rpath3'),
+                document.getElementById('rpath4'),
+                document.getElementById('rpath5'),
+                document.getElementById('rpath6'),
+                document.getElementById('rpath7'),
+                document.getElementById('rpath8')
+            ];
+            
+            animatePathDrawing(rightPaths, '#rightCometParticles', 'right');
+            addLineEffects('.r-flow-line');
+            
+            // Start synchronized basepath fadeout for right side (basepaths 10-17)
+            const allBasePaths = document.querySelectorAll('#basePaths .basepath');
+            animateBasepathFadeout(rightPaths, allBasePaths, 10);
+
+            // Global glow effect
+            const glowFilter = document.querySelector('#glow feGaussianBlur');
+            if (glowFilter) {
+                gsap.to(glowFilter, {
+                    attr: { stdDeviation: 6 },
+                    duration: 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut"
+                });
+            }
+        }
+
+        // Initialize everything when DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeAnimations);
+    </script>
+</body>
+</html>

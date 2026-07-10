@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <title>Trends · DevAI NEO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/neo-foundations.css">
+  <link rel="stylesheet" href="../css/trends.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    .chart-card { opacity: 0; transform: translateY(12px); }
+  </style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="g-chev" viewBox="0 0 16 16">
+        <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+      </symbol>
+      <symbol id="g-info" viewBox="0 0 16 16">
+        <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.3"></circle>
+        <path d="M8 7v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path>
+        <circle cx="8" cy="5" r="0.85" fill="currentColor"></circle>
+      </symbol>
+    </defs>
+  </svg>
+
+  <main class="page">
+
+    <!-- ===================== TOP BAR ===================== -->
+    <header class="topbar">
+      <span class="current-label">Current:</span>
+      <div class="source-chips">
+        <span class="chip">
+          <img src="../img/Sys/SN_16x16_Disc.svg" width="18" height="18" alt="ServiceNow">
+          ServiceNow
+          <span class="gear" title="Configure source"><img src="../img/Controls/settings.svg" width="14" height="14" alt="Settings"></span>
+        </span>
+        <span class="chip">
+          <img src="../img/Sys/VMW_16x16_Disc.svg" width="18" height="18" alt="VMware VROPS">
+          VMware VROPS
+          <span class="gear" title="Configure source"><img src="../img/Controls/settings.svg" width="14" height="14" alt="Settings"></span>
+        </span>
+        <button class="switch">Switch <svg width="13" height="13"><use href="#g-chev"></use></svg></button>
+      </div>
+      <div class="live-wrap">
+        <span class="live-badge">
+          <span class="dot"></span>
+          Live <span class="sep">·</span> Now
+          <span class="info"><svg width="13" height="13"><use href="#g-info"></use></svg></span>
+        </span>
+        <span class="next-audit">Next audit at: Oct/20/2025 9:59:59 pm</span>
+      </div>
+    </header>
+
+    <!-- ===================== TABS ===================== -->
+    <nav class="tabs">
+      <button>Summary</button>
+      <button class="active">Trends</button>
+      <button>Risks</button>
+    </nav>
+
+    <!-- ===================== RANGE PILLS ===================== -->
+    <div class="ranges">
+      <button class="range-btn">Last 7 days trend</button>
+      <button class="range-btn active">Last 30 days trend</button>
+      <button class="range-btn">Last 90 days trend</button>
+      <button class="range-btn">Customize</button>
+    </div>
+
+    <!-- ===================== CHARTS ===================== -->
+    <section class="chart-card">
+      <div class="ct"><span class="swatch" style="background:#23A552"></span>Host in sync</div>
+      <div class="chart-mount" id="c-sync"></div>
+    </section>
+
+    <section class="chart-card pink">
+      <div class="ct"><span class="swatch" style="background:#EC2138"></span>Host with discrepancy</div>
+      <div class="chart-mount" id="c-disc"></div>
+    </section>
+
+    <section class="chart-card">
+      <div class="ct"><img src="../img/Sys/SN_16x16_Disc.svg" width="16" height="16" alt="ServiceNow">Host not in ServiceNow</div>
+      <div class="chart-mount" id="c-nosn"></div>
+    </section>
+
+    <section class="chart-card blue">
+      <div class="ct"><img src="../img/Sys/VMW_16x16_Disc.svg" width="16" height="16" alt="VMware VROPS">Host not in VMware VROPS</div>
+      <div class="chart-mount" id="c-novmw"></div>
+    </section>
+
+  </main>
+
+  <script>
+    const CHARTS = [
+      {
+        mount: "c-sync", color: "#23A552", ymax: 200, ticks: [0,50,100,150,200],
+        data: [2,4,4,4,4,4,4,4,4,4,4,4, 182,182,182, 177,177,177,177,177,177,177,177]
+      },
+      {
+        mount: "c-disc", color: "#EC2138", ymax: 250, ticks: [0,50,100,150,200,250],
+        data: [230, 234,234,234,234,234,234,234,234, 229,229,229, 29,29,29,29,29,29,29,29,29,29, 26]
+      },
+      {
+        mount: "c-nosn", color: "#32C7A9", ymax: 50, ticks: [0,10,20,30,40,50],
+        data: [34,34,34,34,34,34,34,34,34,34,34,34, 7,7,7,7,7,7,7,7,7,7, 2]
+      },
+      {
+        mount: "c-novmw", color: "#2F7DF1", ymax: 500, ticks: [0,100,200,300,400,500],
+        data: [15,10,10,10,12, 236, 310,310,310,310,310, 34,34,34,34,34,34,34,34,34,34,34,34]
+      }
+    ];
+
+    const W = 720, H = 210, L = 50, R = 706, T = 30, B = 182;
+
+    function smoothPath(pts) {
+      if (pts.length < 2) return "";
+      let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      const t = 0.16;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2] || pts[i + 1];
+        let c1x = p1.x + (p2.x - p0.x) * t;
+        let c1y = p1.y + (p2.y - p0.y) * t;
+        let c2x = p2.x - (p3.x - p1.x) * t;
+        let c2y = p2.y - (p3.y - p1.y) * t;
+        c1y = Math.max(14, Math.min(B, c1y));
+        c2y = Math.max(14, Math.min(B, c2y));
+        d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return d;
+    }
+
+    function render(cfg) {
+      const n = cfg.data.length;
+      const xAt = i => L + (R - L) * i / (n - 1);
+      const yAt = v => B - (v / cfg.ymax) * (B - T);
+      const pts = cfg.data.map((v, i) => ({ x: xAt(i), y: yAt(v), v }));
+
+      let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">`;
+
+      // gridlines + y labels (hidden initially, animated in)
+      cfg.ticks.forEach(tk => {
+        const gy = yAt(tk);
+        const cls = tk === 0 ? "baseline" : "gridline";
+        svg += `<line class="${cls} grid-el" x1="${L}" y1="${gy.toFixed(1)}" x2="${R}" y2="${gy.toFixed(1)}" opacity="0"/>`;
+        svg += `<text class="ylabel grid-el" x="${L - 8}" y="${(gy + 3.5).toFixed(1)}" text-anchor="end" opacity="0">${tk}</text>`;
+      });
+
+      // trend line
+      svg += `<path class="trend-line" d="${smoothPath(pts)}" fill="none" stroke="${cfg.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+      // value labels (hidden initially)
+      pts.forEach((p, i) => {
+        const isEdge = (i === 0 || i === n - 1);
+        svg += `<text class="vlabel${isEdge ? " hl" : ""}" x="${p.x.toFixed(1)}" y="${Math.max(13, p.y - 8).toFixed(1)}" opacity="0">${p.v}</text>`;
+      });
+
+      // markers (hidden initially)
+      pts.forEach(p => {
+        svg += `<circle class="marker" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.1" fill="#fff" stroke="${cfg.color}" stroke-width="1.6" opacity="0"/>`;
+      });
+
+      svg += `</svg>`;
+      document.getElementById(cfg.mount).innerHTML = svg;
+    }
+
+    // ── Render all charts (hidden state) ──
+    CHARTS.forEach(render);
+
+    // ── Auto-scroll helper ─────────────────────────────────────
+    function scrollToEl(el) {
+      const rect = el.getBoundingClientRect();
+      const bottom = rect.bottom + window.scrollY;
+      const viewH = window.innerHeight;
+      if (bottom > window.scrollY + viewH) {
+        window.scrollTo({ top: bottom - viewH + 40, behavior: 'smooth' });
+      }
+    }
+
+    // ── Animate a single chart card: reveal → grid → line draw → markers + labels ──
+    function animateChart(card) {
+      const tl = gsap.timeline();
+      const line     = card.querySelector('.trend-line');
+      const gridEls  = card.querySelectorAll('.grid-el');
+      const markers  = card.querySelectorAll('.marker');
+      const labels   = card.querySelectorAll('.vlabel');
+
+      // 1. Fade in the card + scroll into view
+      tl.to(card, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' });
+      tl.add(() => scrollToEl(card), '<+=0.2');
+
+      // 2. Fade in grid lines + y-axis labels
+      tl.to(gridEls, { opacity: 1, duration: 0.3, stagger: 0.03, ease: 'power1.out' }, '-=0.1');
+
+      // 3. Draw the trend line
+      const len = line.getTotalLength();
+      gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
+      tl.to(line, { strokeDashoffset: 0, duration: 1.2, ease: 'power1.inOut' }, '-=0.1');
+
+      // 4. Pop in markers along the line (staggered left-to-right)
+      tl.to(markers, {
+        opacity: 1, scale: 1, duration: 0.2, stagger: 0.03,
+        ease: 'back.out(2)', transformOrigin: '50% 50%'
+      }, '-=0.3');
+
+      // 5. Fade in value labels
+      tl.to(labels, { opacity: 1, duration: 0.25, stagger: 0.02, ease: 'power1.out' }, '-=0.3');
+
+      return tl;
+    }
+
+    // ── Master timeline: sequential card animations ──
+    document.addEventListener('DOMContentLoaded', () => {
+      const cards  = document.querySelectorAll('.chart-card');
+      const master = gsap.timeline({ delay: 0.3 });
+
+      // Set markers to scale(0) for pop-in effect
+      document.querySelectorAll('.marker').forEach(m => gsap.set(m, { scale: 0, transformOrigin: '50% 50%' }));
+
+      cards.forEach(card => {
+        master.add(animateChart(card), '>-0.15');
+      });
+
+      // After all charts complete, pause 1s then scroll back to top
+      master.add(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, '+=1');
+    });
+
+    // range pill interaction
+    document.querySelectorAll(".range-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (btn.textContent === "Customize") return;
+        document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+  </script>
+
+</body></html>

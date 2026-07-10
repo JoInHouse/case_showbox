@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEO Buttfly Model Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #060818;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            gap: 30px;
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 100%;
+            max-width: 1575px;
+        }
+
+        #svg-layer {
+            position: relative;
+            width: 100%;
+            display: block;
+        }
+
+        #svg-layer svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            will-change: contents;
+        }
+
+        /* Center image lifted above canvas particles */
+        #image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        #image-overlay svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #canvas-layer,
+            #image-overlay { display: none; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/DrawSVGPlugin.min.js"></script>
+</head>
+<body>
+
+  <div id="animation-container">
+    <div id="svg-layer"><!-- SVG injected via fetch --></div>
+    <canvas id="canvas-layer"></canvas>
+    <div id="image-overlay"><!-- center image SVG lifted here --></div>
+  </div>
+
+  <script>
+    // ─── CONFIG ──────────────────────────────────────────────────────────────
+    const CONFIG = {
+      particles: {
+        countPerPath:   { min: 3,   max: 5   },
+        size:           { min: 2,   max: 3.5 },   // px radius (in SVG coords, scaled at draw)
+        speed:          { min: 9,   max: 16  },   // seconds for full path traversal (higher = slower)
+        emitInterval:   { min: 300, max: 600 },   // ms (kept for reference; not used with pool model)
+        trailLength:    3,                         // ghost trail positions
+        rightSideDelay: 1500,                      // ms before right paths activate
+        colorLeft:      '#879fb5',
+        colorRight:     '#3cf9d1',
+      },
+      dots: {
+        scaleRange:   [0.6, 0.8],
+        opacityRange: [0.4, 1.0],
+        duration:     { min: 1.5, max: 3.0 },
+        stagger:      0.08,
+        ease:         'sine.inOut',
+      },
+      centerImage: {
+        translateX: 18,
+        translateY: 12,
+        scale:      1.04,
+        rotation:   1.8,
+        duration:   5,
+        ease:       'sine.inOut',
+      },
+      gradientBorder: {
+        duration: 4,
+        ease:     'none',
+        method:   'dashoffset',
+      },
+    };
+
+    // ─── STATE ───────────────────────────────────────────────────────────────
+    const state = {
+      svg:          null,
+      canvas:       null,
+      ctx:          null,
+      reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      resizeTimer:  null,
+    };
+
+    // ─── HELPERS ─────────────────────────────────────────────────────────────
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+    function hexToRgb(hex) {
+      return {
+        r: parseInt(hex.slice(1, 3), 16),
+        g: parseInt(hex.slice(3, 5), 16),
+        b: parseInt(hex.slice(5, 7), 16),
+      };
+    }
+
+    // Map a point from SVG viewBox space (1575×804) to canvas pixel space
+    const SVG_W = 1575;
+    const SVG_H = 804;
+    function svgPt(x, y) {
+      return {
+        x: x * (state.canvas.width  / SVG_W),
+        y: y * (state.canvas.height / SVG_H),
+      };
+    }
+
+    // ─── CANVAS SIZING ───────────────────────────────────────────────────────
+    // Multiply by devicePixelRatio so the pixel buffer is full-resolution on
+    // Retina / HiDPI screens. CSS size stays controlled by position:absolute +
+    // width/height:100%, so the canvas is scaled down to the right display size.
+    function syncCanvas() {
+      if (!state.svg) return;
+      const rect = state.svg.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      state.canvas.width  = Math.round(rect.width  * dpr);
+      state.canvas.height = Math.round(rect.height * dpr);
+    }
+
+    // ─── RESIZE ──────────────────────────────────────────────────────────────
+    function onResize() {
+      clearTimeout(state.resizeTimer);
+      state.resizeTimer = setTimeout(() => {
+        syncCanvas();
+        // Canvas coordinate scale is recalculated per-frame in svgPt(), no reset needed
+      }, 150);
+    }
+
+    // ─── VISIBILITY API ──────────────────────────────────────────────────────
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        gsap.globalTimeline.pause();
+        particleSystem.pause();
+      } else {
+        gsap.globalTimeline.resume();
+        particleSystem.resume();
+      }
+    });
+
+    // ─── CENTER IMAGE OVERLAY ────────────────────────────────────────────────
+    // Moves the center image rect out of the SVG into a separate overlay SVG
+    // positioned above the canvas layer, so particles stay behind the image.
+    function liftCenterImageAboveCanvas() {
+      const svg = state.svg;
+
+      // The center image is rendered via a <rect fill="url(#patternN)">
+      const centerRect = svg.querySelector('rect[fill^="url(#pattern"]');
+      if (!centerRect) return;
+
+      // Build a minimal overlay SVG with the same viewBox
+      const overlaySvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      overlaySvg.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 1575 804');
+      overlaySvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+      // Clone defs so the pattern/image definition is available in the new SVG
+      const defs = svg.querySelector('defs');
+      if (defs) overlaySvg.appendChild(defs.cloneNode(true));
+
+      // Move the rect (removes it from the original SVG automatically)
+      overlaySvg.appendChild(centerRect);
+
+      document.getElementById('image-overlay').appendChild(overlaySvg);
+    }
+
+    // ─── SVG ELEMENT CATALOGUE ───────────────────────────────────────────────
+    function catalogueSVGElements() {
+      const svg = state.svg;
+
+      const dotCircles = Array.from(svg.querySelectorAll('circle')).filter(c =>
+        c.getAttribute('fill') === '#4F83AB' &&
+        c.getAttribute('fill-opacity') === '0.2'
+      );
+
+      const strokePaths = Array.from(svg.querySelectorAll('path[stroke]'));
+      const lanePaths   = strokePaths.filter(p => p.getAttribute('stroke') === '#2E3047');
+
+      const leftPaths  = [];
+      const rightPaths = [];
+      lanePaths.forEach(p => {
+        const box = p.getBBox();
+        (box.x + box.width / 2 < 774 ? leftPaths : rightPaths).push(p);
+      });
+
+      const outerPath = strokePaths.find(p =>
+        (p.getAttribute('stroke') || '').startsWith('url(')
+      ) || null;
+
+      // Largest left path (excluded from particles) gets the same comet effect
+      const largestLeftPath = [...leftPaths]
+        .sort((a, b) => a.getTotalLength() - b.getTotalLength())
+        .at(-1) || null;
+
+      // Center image was lifted to #image-overlay — target the rect there
+      const centerImage = document.querySelector('#image-overlay svg rect') || null;
+
+      return { dotCircles, leftPaths, rightPaths, outerPath, largestLeftPath, centerImage };
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PHASE 2 — PARTICLE SYSTEM (Canvas)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    class Particle {
+      constructor(pathEl, totalLength, startT, color) {
+        this.path        = pathEl;
+        this.totalLength = totalLength;
+        this.t           = startT;   // 0–1 progress along path
+        this.trail       = [];       // [{x,y}] in SVG coords, newest first
+        this.rgb         = hexToRgb(color);
+        this._randomise();
+      }
+
+      _randomise() {
+        const cfg        = CONFIG.particles;
+        // speedPerSec: fraction of path traversed per second (frame-rate independent)
+        this.speedPerSec = 1 / rand(cfg.speed.min, cfg.speed.max);
+        this.size        = rand(cfg.size.min, cfg.size.max);   // SVG-space radius
+      }
+
+      get opacity() {
+        if (this.t < 0.1) return this.t / 0.1;         // fade-in first 10%
+        if (this.t > 0.9) return (1 - this.t) / 0.1;   // fade-out last 10%
+        return 1;
+      }
+
+      // dt: elapsed milliseconds since last frame
+      update(dt) {
+        this.t += this.speedPerSec * (dt / 1000);
+
+        const dist = Math.min(this.t * this.totalLength, this.totalLength);
+        const pt   = this.path.getPointAtLength(dist);
+        this.trail.unshift({ x: pt.x, y: pt.y });
+
+        const maxTrail = CONFIG.particles.trailLength + 1;
+        if (this.trail.length > maxTrail) this.trail.length = maxTrail;
+
+        if (this.t >= 1) {
+          this.t     = 0;
+          this.trail = [];
+          this._randomise();
+        }
+      }
+
+      // Pass 1: trail dots — no shadow state, cheap
+      drawTrail(ctx) {
+        if (this.trail.length <= 1) return;
+        const { r, g, b } = this.rgb;
+        const trailLen    = CONFIG.particles.trailLength;
+        const alpha       = this.opacity;
+        for (let i = this.trail.length - 1; i >= 1; i--) {
+          const p        = svgPt(this.trail[i].x, this.trail[i].y);
+          const fraction = 1 - i / (trailLen + 1);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, this.size * 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${(alpha * fraction * 0.35).toFixed(3)})`;
+          ctx.fill();
+        }
+      }
+
+      // Pass 2: head — caller sets shadowBlur once; we only set shadowColor
+      drawHead(ctx) {
+        if (this.trail.length === 0) return;
+        const { r, g, b } = this.rgb;
+        const head        = svgPt(this.trail[0].x, this.trail[0].y);
+        ctx.shadowColor   = `rgba(${r},${g},${b},0.8)`;
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${this.opacity})`;
+        ctx.fill();
+      }
+    }
+
+    // ── PathEmitter ───────────────────────────────────────────────────────────
+    // One emitter manages a fixed pool of particles for a single SVG path.
+    // Particles are pre-spread along the path so the effect is instant on start.
+
+    class PathEmitter {
+      constructor(pathEl, color) {
+        this.path        = pathEl;
+        this.totalLength = pathEl.getTotalLength();
+        this.active      = false;
+
+        const count = Math.round(rand(
+          CONFIG.particles.countPerPath.min,
+          CONFIG.particles.countPerPath.max
+        ));
+
+        // Spread particles evenly so the path looks populated from frame 1
+        this.particles = Array.from({ length: count }, (_, i) =>
+          new Particle(pathEl, this.totalLength, i / count, color)
+        );
+      }
+
+      start() { this.active = true; }
+      stop()  { this.active = false; }
+
+      update(dt) {
+        if (!this.active) return;
+        this.particles.forEach(p => p.update(dt));
+      }
+
+      drawTrails(ctx) {
+        if (!this.active) return;
+        this.particles.forEach(p => p.drawTrail(ctx));
+      }
+
+      drawHeads(ctx) {
+        if (!this.active) return;
+        this.particles.forEach(p => p.drawHead(ctx));
+      }
+    }
+
+    // ── particleSystem ────────────────────────────────────────────────────────
+    const particleSystem = {
+      emitters: [],
+      rafId:    null,
+      lastTime: 0,
+
+      init(leftPaths, rightPaths) {
+        this.emitters = [];
+        const cfg = CONFIG.particles;
+
+        // Left: skip the largest path (outermost wing), sort ascending by length
+        const sortedLeft = [...leftPaths].sort((a, b) => a.getTotalLength() - b.getTotalLength());
+        const activeLeft = sortedLeft.slice(0, -1);   // drop the last (longest)
+
+        activeLeft.forEach(p => {
+          const e = new PathEmitter(p, cfg.colorLeft);
+          e.start();
+          this.emitters.push(e);
+        });
+
+        // Right emitters — delayed start
+        rightPaths.forEach(p => {
+          const e = new PathEmitter(p, cfg.colorRight);
+          this.emitters.push(e);
+          setTimeout(() => e.start(), cfg.rightSideDelay);
+        });
+
+        this.lastTime = performance.now();
+        this._tick(this.lastTime);
+      },
+
+      _tick(now) {
+        this.rafId = requestAnimationFrame(t => this._tick(t));
+
+        // Cap dt to 50 ms so a backgrounded tab resuming doesn't teleport particles
+        const dt  = Math.min(now - this.lastTime, 50);
+        this.lastTime = now;
+
+        const ctx    = state.ctx;
+        const canvas = state.canvas;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update positions
+        this.emitters.forEach(e => e.update(dt));
+
+        // Draw pass 1 — trails (no shadow state, cheap fill calls)
+        this.emitters.forEach(e => e.drawTrails(ctx));
+
+        // Draw pass 2 — heads (one save/restore for the glow instead of N)
+        ctx.save();
+        ctx.shadowBlur = 12;
+        this.emitters.forEach(e => e.drawHeads(ctx));
+        ctx.restore();
+      },
+
+      pause() {
+        if (this.rafId) {
+          cancelAnimationFrame(this.rafId);
+          this.rafId = null;
+        }
+      },
+
+      resume() {
+        if (!this.rafId) {
+          this.lastTime = performance.now();
+          this._tick(this.lastTime);
+        }
+      },
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PHASE 3 — DOT ARRAY ANIMATION (GSAP + SVG)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    function animateDots(dotCircles) {
+      const cfg = CONFIG.dots;
+
+      // ── 1. Group dots into columns by shared cx value ─────────────────────
+      const columnMap = new Map();
+      dotCircles.forEach(dot => {
+        const cx = parseFloat(dot.getAttribute('cx'));
+        if (!columnMap.has(cx)) columnMap.set(cx, []);
+        columnMap.get(cx).push(dot);
+      });
+
+      // ── 2. Sort columns left → right ──────────────────────────────────────
+      const columns   = [...columnMap.entries()].sort(([a], [b]) => a - b);
+      const numCols   = columns.length;
+
+      const SWEEP      = 3.5;   // seconds for wave front to cross all columns
+      const COL_SPREAD = 0.4;   // extra seconds for center → top/bottom within a column
+      const DOT_DUR    = 1.5;   // shine half-cycle (× 2 with yoyo = 3 s total)
+
+      const tl = gsap.timeline({ repeat: -1 });
+
+      columns.forEach(([, dots], colIdx) => {
+        // Horizontal start time for this column
+        const colTime = (colIdx / (numCols - 1)) * SWEEP;
+
+        // Vertical midpoint of the column
+        const cys       = dots.map(d => parseFloat(d.getAttribute('cy')));
+        const midCy     = (Math.min(...cys) + Math.max(...cys)) / 2;
+        const halfSpan  = (Math.max(...cys) - Math.min(...cys)) / 2 || 1;
+
+        dots.forEach(dot => {
+          const cy          = parseFloat(dot.getAttribute('cy'));
+          // 0 = center dot, 1 = top/bottom edge dot
+          const distFrac    = Math.abs(cy - midCy) / halfSpan;
+          const dotTime     = colTime + distFrac * COL_SPREAD;
+
+          tl.fromTo(dot,
+            { attr: { r: 1, fill: '#4F83AB', 'fill-opacity': 0.2 } },
+            {
+              attr:     { r: 2, fill: '#3CF9D1', 'fill-opacity': 0.8 },
+              duration: DOT_DUR,
+              ease:     cfg.ease,
+              yoyo:     true,
+              repeat:   1,
+            },
+            dotTime
+          );
+        });
+      });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PHASE 4 — CENTER IMAGE FLOATING ANIMATION (GSAP + SVG)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    function animateCenterImage(centerEl) {
+      if (!centerEl) return;
+      const cfg = CONFIG.centerImage;
+
+      // Derive the rect's center in SVG-space for a correct transform origin
+      const rx = parseFloat(centerEl.getAttribute('x'))     || 0;
+      const ry = parseFloat(centerEl.getAttribute('y'))     || 0;
+      const rw = parseFloat(centerEl.getAttribute('width')) || 0;
+      const rh = parseFloat(centerEl.getAttribute('height'))|| 0;
+      gsap.set(centerEl, { svgOrigin: `${rx + rw / 2} ${ry + rh / 2}` });
+      centerEl.style.willChange = 'transform';
+
+      // Four independent oscillations at slightly different periods so the
+      // image traces a never-repeating Lissajous-like path — feels truly alive.
+      gsap.to(centerEl, {
+        x:        cfg.translateX,
+        duration: cfg.duration * 0.9,
+        ease:     cfg.ease, repeat: -1, yoyo: true,
+      });
+      gsap.to(centerEl, {
+        y:        cfg.translateY,
+        duration: cfg.duration,
+        ease:     cfg.ease, repeat: -1, yoyo: true,
+      });
+      gsap.to(centerEl, {
+        scale:    cfg.scale,          // 1.0 → 1.015 (breathing)
+        duration: cfg.duration * 1.1,
+        ease:     cfg.ease, repeat: -1, yoyo: true,
+      });
+      gsap.to(centerEl, {
+        rotation: cfg.rotation,       // ±0.5°
+        duration: cfg.duration * 1.3,
+        ease:     cfg.ease, repeat: -1, yoyo: true,
+      });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PHASE 5 — GRADIENT BORDER (GSAP + SVG stroke-dashoffset)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // strokeColor: optional override (e.g. for left paths whose stroke is near-black)
+    function animateGradientBorder(outerPath, strokeColor = null) {
+      if (!outerPath) return;
+      const cfg = CONFIG.gradientBorder;
+
+      const totalLength   = outerPath.getTotalLength();
+      const segmentLength = totalLength * 0.22;   // comet head = 22% of path
+
+      // Hint browser to composite these paths on their own layer
+      outerPath.style.willChange = 'stroke-dashoffset, stroke-width';
+
+      // ── Ghost: full-border outline at low opacity, always visible ─────────
+      const ghost = outerPath.cloneNode(true);
+      ghost.removeAttribute('id');
+      outerPath.parentNode.insertBefore(ghost, outerPath);
+      gsap.set(ghost, {
+        attr: {
+          'stroke-dasharray':  'none',
+          'stroke-dashoffset': 0,
+          'stroke-opacity':    0.12,
+          'stroke-width':      1,
+          ...(strokeColor && { stroke: strokeColor }),
+        },
+      });
+
+      // ── Comet: moving segment sweeps the full circumference continuously ──
+      gsap.set(outerPath, {
+        attr: {
+          'stroke-dasharray':  `${segmentLength} ${totalLength - segmentLength}`,
+          'stroke-dashoffset': 0,
+          'stroke-opacity':    1,
+          'stroke-width':      2,
+          ...(strokeColor && { stroke: strokeColor }),
+        },
+      });
+
+      // Main sweep — offset travels the full length once per cycle
+      gsap.to(outerPath, {
+        attr:     { 'stroke-dashoffset': -totalLength },
+        duration: cfg.duration,
+        ease:     cfg.ease,   // 'none' = constant speed
+        repeat:   -1,
+      });
+
+      // Subtle stroke-width breathe so the comet "pulses" as it moves
+      gsap.to(outerPath, {
+        attr:     { 'stroke-width': 3.5 },
+        duration: cfg.duration * 0.5,
+        ease:     'sine.inOut',
+        repeat:   -1,
+        yoyo:     true,
+      });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═════════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      state.canvas = document.getElementById('canvas-layer');
+      state.ctx    = state.canvas.getContext('2d');
+
+      if (window.DrawSVGPlugin) gsap.registerPlugin(DrawSVGPlugin);
+
+      try {
+        const res      = await fetch('img/Gigaram.svg');
+        const svgText  = await res.text();
+        const svgLayer = document.getElementById('svg-layer');
+
+        svgLayer.innerHTML = svgText;
+        state.svg = svgLayer.querySelector('svg');
+
+        state.svg.removeAttribute('width');
+        state.svg.removeAttribute('height');
+        state.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+        // Lift center image above the canvas particle layer
+        liftCenterImageAboveCanvas();
+
+        requestAnimationFrame(() => {
+          syncCanvas();
+          // ResizeObserver fires on container resize (more precise than window resize)
+          new ResizeObserver(onResize).observe(
+            document.getElementById('animation-container')
+          );
+
+          if (!state.reducedMotion) {
+            const el = catalogueSVGElements();
+            console.log('[Phase 1] catalogue:', {
+              dots: el.dotCircles.length,
+              leftPaths: el.leftPaths.length,
+              rightPaths: el.rightPaths.length,
+              outerPath: !!el.outerPath,
+              centerImage: !!el.centerImage,
+            });
+
+            // Phase 2 — particle system
+            particleSystem.init(el.leftPaths, el.rightPaths);
+
+            // Phase 3 — dot array
+            animateDots(el.dotCircles);
+
+            // Phase 4 — center image floating
+            animateCenterImage(el.centerImage);
+            // Phase 5 — gradient border comet (right outer + largest left)
+            animateGradientBorder(el.outerPath);
+            animateGradientBorder(el.largestLeftPath, CONFIG.particles.colorLeft);
+          }
+        });
+
+      } catch (err) {
+        console.error('[Gigaram] SVG load failed:', err);
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

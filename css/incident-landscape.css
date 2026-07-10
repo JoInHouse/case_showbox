@@ -1,0 +1,423 @@
+/* ============================================================
+   Incident Landscape — page-specific styles
+   Requires: neo-foundations.css
+   ============================================================ */
+
+/* =========================================================
+   Page
+   ========================================================= */
+html, body {
+  background: var(--neo-app-bg);
+  color: var(--neo-fg-1);
+  font-size: var(--text-sm);
+}
+body {
+  padding: 24px 16px 48px;
+  display: flex;
+  justify-content: center;
+}
+
+.page {
+  width: 760px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* =========================================================
+   Header
+   ========================================================= */
+.results-head { padding: 4px 4px 0; }
+.results-head .crumb {
+  font-size: 13px;
+  color: var(--neo-fg-2);
+  line-height: 1.2;
+}
+.results-head .term {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--neo-indigo);
+  letter-spacing: -0.01em;
+  margin-left: 4px;
+}
+.results-head .title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--neo-violet-text);
+  margin-top: 4px;
+  line-height: 1.2;
+}
+.results-head .summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--neo-fg-2);
+}
+.results-head .summary b { color: var(--neo-fg-1); font-weight: 700; }
+
+/* =========================================================
+   View toggle
+   ========================================================= */
+.view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--neo-bg-2);
+  border-radius: 6px;
+  border: 1px solid var(--neo-indigo-100);
+  width: fit-content;
+}
+.view-toggle button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--neo-fg-2);
+  padding: 6px 14px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.view-toggle button.active {
+  background: var(--neo-indigo);
+  color: #fff;
+  box-shadow: var(--shadow-1);
+}
+.view-toggle button.active svg path { stroke: #fff; }
+
+/* =========================================================
+   Card
+   ========================================================= */
+.card {
+  background: var(--neo-surface);
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--neo-fg-1);
+  line-height: 1.2;
+}
+.card-head .ic {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--neo-fg-2);
+}
+.card-head .meta-right {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--neo-fg-3);
+}
+
+/* =========================================================
+   Incident Details — key/value grid
+   ========================================================= */
+.kv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 0;
+}
+.kv-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  column-gap: 10px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--neo-border);
+  font-size: 13px;
+  min-height: 32px;
+}
+.kv-row:last-child { border-bottom: none; }
+.kv-row .k { color: var(--neo-fg-3); font-weight: 400; }
+.kv-row .v {
+  color: var(--neo-fg-1);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.kv-row.span-2 { grid-column: 1 / -1; grid-template-columns: 110px 1fr; }
+.kv-row.span-2 .v { font-weight: 400; line-height: 1.5; text-wrap: pretty; }
+
+/* Status pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  height: 20px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  line-height: 1;
+  white-space: nowrap;
+}
+.pill::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.9;
+}
+.pill.new      { background: #E7F8E1; color: #2A7A1A; }
+.pill.active   { background: #E7F8E1; color: #2A7A1A; }
+.pill.closed   { background: var(--neo-bg-2); color: var(--neo-fg-2); }
+.pill.error    { background: #FFF1DE; color: #9A4B16; }
+.pill.installed{ background: var(--neo-indigo-light-100); color: var(--neo-violet-text); }
+.pill.moderate { background: var(--neo-pink); color: #9B1E5E; }
+.pill.medium   { background: var(--neo-pink); color: #9B1E5E; }
+.pill.low      { background: var(--neo-bg-2); color: var(--neo-fg-2); }
+.pill.no-dot::before { display: none; }
+
+/* mono — reserved for the rare prose context where it's needed; not used inside list values */
+.mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: -0.01em; }
+.link { color: var(--neo-link); text-decoration: none; cursor: pointer; font-weight: 500; }
+.link:hover { text-decoration: underline; }
+
+/* Associated problems */
+.assoc {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--neo-indigo-100);
+}
+.assoc-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--neo-fg-1);
+  margin-bottom: 8px;
+}
+.assoc-title svg { color: var(--neo-fg-2); }
+.assoc-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; padding: 4px 0;
+}
+.assoc-row .prb {
+  color: var(--neo-danger);
+  font-weight: 600;
+  font-size: 13px;
+}
+.assoc-row .prb:hover { text-decoration: underline; cursor: pointer; }
+
+/* =========================================================
+   Table
+   ========================================================= */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.tbl thead th {
+  background: var(--neo-indigo-50);
+  color: var(--neo-fg-2);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--neo-indigo-100);
+  font-size: 12px;
+}
+.tbl thead th:first-child { border-radius: 6px 0 0 0; }
+.tbl thead th:last-child  { border-radius: 0 6px 0 0; }
+.tbl tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--neo-border);
+  color: var(--neo-fg-1);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.tbl tbody tr:last-child td { border-bottom: none; }
+.tbl tbody tr:hover { background: var(--neo-bg-2); }
+.tbl td .muted { color: var(--neo-fg-4); font-weight: 400; }
+
+/* =========================================================
+   CI block — wraps source cards in a soft wash
+   ========================================================= */
+.ci-block {
+  background: var(--neo-bg-2);
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.ci-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--neo-fg-1);
+  margin-bottom: 12px;
+}
+.ci-head .ci-name { color: var(--neo-indigo); }
+.ci-head .sn-disc {
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+}
+
+/* Underline tabs */
+.tabs {
+  display: flex; gap: 18px;
+  border-bottom: 1px solid var(--neo-indigo-100);
+  margin-bottom: 10px;
+}
+.tabs button {
+  border: none; background: transparent; cursor: pointer;
+  font: inherit;
+  font-size: 13px; font-weight: 600;
+  color: var(--neo-fg-3);
+  padding: 6px 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+.tabs button.active {
+  color: var(--neo-indigo);
+  border-bottom-color: var(--neo-indigo);
+}
+.tabs button:hover { color: var(--neo-fg-1); }
+.tabs button.active:hover { color: var(--neo-indigo); }
+
+.found {
+  display: flex; align-items: center; gap: 16px;
+  font-size: 12px;
+  color: var(--neo-fg-2);
+  margin-bottom: 12px;
+}
+.found .item { display: inline-flex; align-items: center; gap: 6px; }
+.found .item b { color: var(--neo-fg-1); font-weight: 700; }
+.found .agent-disc { display: block; flex-shrink: 0; }
+.found .none { color: var(--neo-fg-4); font-style: italic; }
+
+/* Source card grid */
+.src-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.src-grid.cols-1 { grid-template-columns: 1fr; }
+.src-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+
+.src-card {
+  background: #fff;
+  border: 1px solid var(--neo-indigo-100);
+  border-radius: var(--radius-md);
+  padding: 11px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.src-card.cols-1 { padding: 14px 16px 10px; }
+
+.src-card .src-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+}
+.src-card .src-head .agent-disc { display: block; flex-shrink: 0; }
+.src-card .src-head .name {
+  font-size: 12.5px; font-weight: 700; color: var(--neo-fg-1);
+}
+.src-card .src-head .tag {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--neo-fg-3);
+  border: 1px solid var(--neo-indigo-hair);
+  border-radius: 3px;
+  padding: 1px 5px;
+  background: #fff;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.src-card .src-rows {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  row-gap: 4px;
+  column-gap: 8px;
+  font-size: 11.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--neo-border);
+}
+.src-card.cols-1 .src-rows {
+  grid-template-columns: 110px 1fr;
+  font-size: 12.5px;
+  row-gap: 6px;
+}
+.src-card .src-rows .k { color: var(--neo-fg-3); }
+.src-card .src-rows .v {
+  color: var(--neo-fg-1);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.src-card .src-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0 2px;
+  font-size: 11.5px;
+}
+.src-card.cols-1 .src-foot { font-size: 12.5px; padding-top: 10px; }
+.src-card .src-foot a {
+  color: var(--neo-link);
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 600;
+}
+.src-card .src-foot a:hover { text-decoration: underline; }
+.src-card .src-foot .get-child {
+  color: var(--neo-fg-2);
+  font-weight: 600;
+}
+.src-card .src-foot .get-child svg { color: var(--neo-fg-3); }
+
+/* Pulled-out "primary source" treatment for the SN card when only it is shown */
+.src-card.primary {
+  border-color: var(--neo-indigo-hair);
+  box-shadow: var(--shadow-1);
+}
+
+/* =========================================================
+   Splunk empty state
+   ========================================================= */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px 24px;
+  color: var(--neo-fg-3);
+  font-size: 13px;
+}
+.empty svg { color: var(--neo-fg-4); }
+
+/* =========================================================
+   Misc small visuals
+   ========================================================= */
+.splunk-mark,
+.dyna-mark {
+  display: block;
+}
+.impact-mark {
+  width: 18px; height: 18px;
+  display: inline-grid; place-items: center;
+  color: var(--neo-indigo);
+}
+.incident-mark {
+  width: 18px; height: 18px;
+  display: inline-grid; place-items: center;
+  color: var(--neo-indigo);
+}

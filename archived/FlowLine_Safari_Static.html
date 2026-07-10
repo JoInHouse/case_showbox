@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Line Flow - Static Version</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .flow-line, .r-flow-line {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+        }
+
+        .basepath{
+            stroke-width:1px;
+            stroke-opacity: 1;
+            stroke:#181E50;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <svg width="1980" height="767" viewBox="0 0 1980 767" fill="none">
+        <defs>
+            <!-- Gradient definitions for each line -->
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#32C7A9" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#74A3DD" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#EC7FEC" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#F39B77" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#2E69B5" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient6" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#54C6FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient7" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#51FDA3" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient8" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#7168EB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient9" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#0CA1E0" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+            </linearGradient>
+            
+            <linearGradient id="gradient10" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                <stop offset="20%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="80%" stop-color="#6AE7FB" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+            </linearGradient>
+
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+ 
+          <!-- basepath Set -->
+          <g id="basePaths">
+            <!-- Left side basepaths (indices 0-9) -->
+            <path class="basepath" d="M4.24805 261.363
+            C225 366.5 378.5 334 436.246 313.615
+            C493.993 293.23 556.121 240.928 606.247 240.928
+            C656.374 240.928 701.747 281.077 751 294
+            C800.253 306.923 909.5 312 970 312"/>
+            <path class="basepath" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+            <path class="basepath" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="basepath" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="basepath" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <path class="basepath" d="M4 581C253.301 367 507.156 313 970 313"/>
+            <path class="basepath" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+            <path class="basepath" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+            <path class="basepath" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <path class="basepath" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+            <!-- Right side basepaths (indices 10-17) -->
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+            <path class="basepath" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+            <path class="basepath" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+            <path class="basepath" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+        </g>   
+        
+        <!-- Flowlines Set -->
+        <g id="flowLines">
+            <path class="flow-line" id="path1" data-width="1.5" data-speed="2" stroke="url(#gradient1)" filter="url(#glow)" d="M4.24805 261.363
+            C225 366.5 378.5 334 436.246 313.615
+            C493.993 293.23 556.121 240.928 606.247 240.928
+            C656.374 240.928 701.747 281.077 751 294
+            C800.253 306.923 909.5 312 970 312"/>
+            <!--path class="flow-line" id="path2" data-width="2" data-speed="2" stroke="url(#gradient2)" filter="url(#glow)" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/-->
+            <path class="flow-line" id="path3" data-width="1" data-speed="2.4" stroke="url(#gradient3)" filter="url(#glow)" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+            <path class="flow-line" id="path4" data-width="1" data-speed="2.6" stroke="url(#gradient4)" filter="url(#glow)" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+            <path class="flow-line" id="path5" data-width="2" data-speed="2.8" stroke="url(#gradient5)" filter="url(#glow)" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+            <!--path class="flow-line" id="path6" data-width="1.5" data-speed="3" stroke="url(#gradient6)" filter="url(#glow)" d="M4 581C253.301 367 507.156 313 970 313"/-->
+            <!--path class="flow-line" id="path7" data-width="3" data-speed="2.2" stroke="url(#gradient7)" filter="url(#glow)" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/-->
+            <!--path class="flow-line" id="path8" data-width="2" data-speed="2" stroke="url(#gradient8)" filter="url(#glow)" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/-->
+            <path class="flow-line" id="path9" data-width="1" data-speed="1.6" stroke="url(#gradient9)" filter="url(#glow)" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+            <!--path class="flow-line" id="path10" data-width="3" data-speed="1.8" stroke="url(#gradient10)" filter="url(#glow)" d="M4 765C504.854 313 495.053 313 970.5 313"/-->
+        </g>
+
+        <!-- Right side flow lines -->
+        <g id="rightFlowLines">
+            <path class="r-flow-line" id="rpath1" data-speed="3" data-width="2" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+            <!--path class="r-flow-line" id="rpath2" data-speed="3" data-width="1" stroke="url(#gradient5)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135" /-->
+            <!--path class="r-flow-line" id="rpath3" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/-->
+            <path class="r-flow-line" id="rpath4" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348" />
+            <!--path class="r-flow-line" id="rpath5" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347" /-->
+            <path class="r-flow-line" id="rpath6" data-speed="3" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135" />
+            <!--path class="r-flow-line" id="rpath7" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/-->
+            <path class="r-flow-line" id="rpath8" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+        </g>
+    </svg>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevAI — Solution Diagram</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #060818;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.35;
+      margin: 0 0 32px;
+    }
+
+    #svg-container {
+      width: min(841px, 100%);
+      aspect-ratio: 841 / 820;
+    }
+
+    #svg-container svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    /* ── Layer 1: ambient breathe ────────────────────────────────── */
+    /* Opacity-only: avoid scale on feGaussianBlur containers —
+       Safari re-rasterises the blur every frame when transform changes. */
+    #ambient-glow {
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.55; }
+      50%       { opacity: 1.00; }
+    }
+
+    /* ── Center mascot float: handled by GSAP ───────────────────── */
+
+    /* ── Orbit ring: suppress original gradient stroke (comet overlay replaces it) ── */
+    #orbit-ring { stroke: none; }
+
+    /* ── Spokes: thicken slightly + double the dot gap (SVG is "0 4") ── */
+    .spoke { stroke-width: 2; stroke-dasharray: 0 8; }
+
+    /* ── Reduced motion: no animation at all ────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      #ambient-glow {
+        animation: none;
+      }
+    }
+
+    /* Loading state */
+    #svg-container:empty::after {
+      content: "Loading…";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: rgba(255,255,255,0.2);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>DevAI · Solution Hub</h1>
+  <div id="svg-container"></div>
+
+  <!-- GSAP core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <script>
+    // ── Fetch + inline SVG so GSAP can target elements by id/class ──────────
+    fetch('../img/SolutionDiagram.layered.svg')
+      .then(r => r.text())
+      .then(svgText => {
+        // Rewrite image hrefs that are relative to the SVG's own directory
+        // so they still resolve correctly after the SVG is injected inline here.
+        svgText = svgText.replace(/href="devai-mascot\.png"/g, 'href="../img/devai-mascot.png"');
+        document.getElementById('svg-container').innerHTML = svgText;
+        initAnimations();
+      })
+      .catch(err => {
+        console.error('SVG load failed:', err);
+        document.getElementById('svg-container').textContent = 'SVG failed to load. Open via a local server.';
+      });
+
+    // ── Respect reduced-motion at the JS level too ───────────────────────────
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function initAnimations() {
+      if (reducedMotion) {
+        // Static: just do a single gentle fade-in of icons (labels stay visible)
+        gsap.to('[id^="icon-"]:not(#icon-labels)', { opacity: 1, duration: 1, stagger: 0.05 });
+        return;
+      }
+
+      // Use IntersectionObserver so animations start when diagram is visible
+      const container = document.getElementById('svg-container');
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              startAnimations();
+              observer.disconnect();
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      observer.observe(container);
+    }
+
+    function startAnimations() {
+      const CENTER       = { x: 420.5, y: 427.93 };
+      const RADIUS       = 294.5;
+      const DURATION     = 8;        // seconds per full lap (slightly quicker)
+      const TRAIL_COUNT  = 28;       // enough circles for a continuous ribbon
+      const TRAIL_STEP   = 0.0018;   // tight spacing (~3.3 px) so circles overlap into a smooth tail
+
+      const svgEl      = document.querySelector('#svg-container svg');
+      const orbitTrack = document.querySelector('#orbit-track');
+
+      // Build comet DOM: trail circles first (rendered behind head)
+      const cometGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+      // Pre-compute per-circle r and opacity (they depend only on index, not progress)
+      // Radius tapers gently (4 → 1.6) so neighbouring circles always overlap,
+      // producing a smooth continuous ribbon instead of individual beads.
+      const trailCircles = Array.from({ length: TRAIL_COUNT }, (_, i) => {
+        const t = (TRAIL_COUNT - i) / TRAIL_COUNT;   // 1 = closest → 0 = farthest
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('r',       4 * (t * 0.6 + 0.4));   // 4 → 1.6 — wider floor keeps tail solid
+        c.setAttribute('fill',    '#3CF9D1');
+        c.setAttribute('opacity', t * 0.7);
+        cometGroup.appendChild(c);
+        return c;
+      });
+
+      // Comet head: use a layered pair of circles instead of feGaussianBlur filter.
+      // Safari re-rasterises blur filters on every position change — this is much cheaper.
+      const headGlow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      headGlow.setAttribute('r',       '8');
+      headGlow.setAttribute('fill',    '#3CF9D1');
+      headGlow.setAttribute('opacity', '0.35');
+      cometGroup.appendChild(headGlow);
+
+      const headCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      headCircle.setAttribute('r',      '4');
+      headCircle.setAttribute('fill',   '#effffc');  // near-white hot tip
+      cometGroup.appendChild(headCircle);
+
+      orbitTrack.appendChild(cometGroup);
+
+      // Returns {x, y} on the orbit ring at normalised progress [0,1)
+      // p=0 → (cx+r, cy) = 3 o'clock; clockwise with increasing p
+      function orbitPoint(p) {
+        const a = ((p % 1) + 1) % 1 * 2 * Math.PI;
+        return { x: CENTER.x + RADIUS * Math.cos(a), y: CENTER.y + RADIUS * Math.sin(a) };
+      }
+
+      // ── Dot angles for twinkle sync ──────────────────────────────────────────
+      const dots = Array.from(document.querySelectorAll('.orbit-dot')).map(el => {
+        const bbox  = el.getBBox();
+        const cx    = bbox.x + bbox.width  / 2;
+        const cy    = bbox.y + bbox.height / 2;
+        let angle   = Math.atan2(cy - CENTER.y, cx - CENTER.x) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+        return { el, angle };
+      });
+
+      let lastTriggered  = -1;
+      let twinkleActive  = false;
+      gsap.delayedCall(2.0, () => { twinkleActive = true; });
+
+      // ── Main comet tween ─────────────────────────────────────────────────────
+      const state = { progress: 0 };
+      gsap.to(state, {
+        progress: 1,
+        duration: DURATION,
+        ease: 'none',
+        repeat: -1,
+        onUpdate() {
+          const p  = state.progress;
+          const pt = orbitPoint(p);
+
+          // Move head + glow — direct setAttribute avoids per-call GSAP overhead
+          headCircle.setAttribute('cx', pt.x);
+          headCircle.setAttribute('cy', pt.y);
+          headGlow.setAttribute('cx', pt.x);
+          headGlow.setAttribute('cy', pt.y);
+
+          // Position trail: only cx/cy change per frame (r/opacity are pre-set)
+          for (let i = 0; i < TRAIL_COUNT; i++) {
+            const pos = orbitPoint(p - (i + 1) * TRAIL_STEP);
+            trailCircles[i].setAttribute('cx', pos.x);
+            trailCircles[i].setAttribute('cy', pos.y);
+          }
+
+          // Twinkle check
+          if (!twinkleActive) return;
+          const cometAngle = ((p % 1) + 1) % 1 * 360;  // 0°=right, clockwise
+
+          let nearest = -1, nearestDist = 999;
+          dots.forEach((d, i) => {
+            let diff = Math.abs(d.angle - cometAngle);
+            diff = Math.min(diff, 360 - diff);
+            if (diff < nearestDist) { nearestDist = diff; nearest = i; }
+          });
+
+          if (nearestDist < 7 && nearest !== lastTriggered) {
+            twinkle(dots[nearest].el);
+            lastTriggered = nearest;
+          } else if (nearestDist > 20) {
+            lastTriggered = -1;   // reset so same dot fires again next revolution
+          }
+        },
+      });
+
+      function twinkle(el) {
+        // Use SVG transform attribute directly — GSAP's CSS scale on SVG
+        // elements is unreliable in Safari (no CSS transform on SVG content).
+        const bbox = el.getBBox();
+        const cx = bbox.x + bbox.width / 2;
+        const cy = bbox.y + bbox.height / 2;
+        const anim = { s: 1, fo: 0.5, br: 1 };
+        gsap.fromTo(anim, { s: 1, fo: 0.5, br: 1 }, {
+          s: 1.5, fo: 1.0, br: 2.2,   // br = brightness multiplier at peak
+          duration: 0.2, yoyo: true, repeat: 1, ease: 'sine.inOut',
+          onUpdate() {
+            el.setAttribute('transform',
+              `translate(${cx}, ${cy}) scale(${anim.s}) translate(${-cx}, ${-cy})`);
+            el.setAttribute('fill-opacity', anim.fo);
+            // Brightness + soft cyan glow that grows with the twinkle
+            const glow = (anim.br - 1) * 4;   // 0 → ~4.8px
+            el.style.filter = `brightness(${anim.br}) drop-shadow(0 0 ${glow}px #3CF9D1)`;
+          },
+          onComplete() {
+            el.removeAttribute('transform');
+            el.setAttribute('fill-opacity', 0.5);
+            el.style.filter = '';
+          },
+        });
+      }
+
+      // ── Layer 5: Icon entrance (staggered scale-in) ─────────────────────────
+      // Exclude #icon-labels (text must stay legible) and #center-logo (handled separately)
+      const iconSelector = '[id^="icon-"]:not(#icon-labels)';
+      gsap.set(iconSelector, { scale: 0, opacity: 0, transformOrigin: '50% 50%' });
+      gsap.set('#center-logo', { opacity: 0 });
+
+      const iconTl = gsap.to(iconSelector, {
+        scale: 1, opacity: 1,
+        duration: 0.5,
+        ease: 'back.out(1.7)',
+        stagger: { each: 0.06, from: 'random' },
+        delay: 0.3,
+      });
+
+      // Center logo fades in 0.3s after the last icon settles
+      const iconCount = document.querySelectorAll(iconSelector).length;
+      const iconsDuration = 0.3 + (iconCount * 0.06) + 0.5; // delay + stagger span + tween duration
+      gsap.to('#center-logo', { opacity: 1, duration: 0.5, delay: iconsDuration, onComplete: floatMascot });
+
+      function floatMascot() {
+        const mascot = document.querySelector('#center-logo');
+        // Remove any inline CSS transform from the entrance tween so we can
+        // drive the SVG transform attribute directly (Safari-safe).
+        mascot.style.transform = '';
+        mascot.style.webkitTransform = '';
+        mascot.removeAttribute('data-svg-origin');   // GSAP SVG origin marker
+        mascot.setAttribute('transform', 'translate(0, 0)');
+
+        const pos = { x: 0, y: 0 };
+        function step() {
+          gsap.to(pos, {
+            x: gsap.utils.random(-20, 20),
+            y: gsap.utils.random(-20, 20),
+            duration: gsap.utils.random(2, 4),
+            ease: 'sine.inOut',
+            overwrite: true,
+            onUpdate() {
+              mascot.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+            },
+            onComplete: step,
+          });
+        }
+        step();
+      }
+
+      // ── Layer 4: Spoke inward flow ─────────────────────────────────────────
+      // Spokes begin after icons have settled (~1.5s)
+      gsap.delayedCall(1.5, startSpokes);
+    }
+
+    function startSpokes() {
+      // Single tween drives all spokes via one onUpdate — avoids 25 independent
+      // GSAP tweens each triggering their own style recalc in Safari.
+      const spokes = Array.from(document.querySelectorAll('.spoke'));
+      const offsets = spokes.map((_, i) => i * 0.05 * (40 / 2.2)); // stagger as initial offset
+      const state = { t: 0 };
+      gsap.to(state, {
+        t: 40,
+        duration: 2.2,
+        repeat: -1,
+        ease: 'none',
+        onUpdate() {
+          for (let i = 0; i < spokes.length; i++) {
+            spokes[i].style.strokeDashoffset = -(state.t + offsets[i]);
+          }
+        },
+      });
+    }
+  </script>
+</body>
+</html>

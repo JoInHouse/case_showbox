@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Process Animation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #060818;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            gap: 30px;
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        /* Simulation Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid #2CE1B3;
+            color: #2CE1B3;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            background: #2CE1B3;
+            color: #060818;
+            box-shadow: 0 0 10px rgba(44, 225, 179, 0.5);
+        }
+
+        button.auto-btn {
+            background: #2CE1B3;
+            color: #060818;
+            font-weight: bold;
+            border: none;
+        }
+
+        /* NEO Container */
+        .emojifigure{
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Gradient background layer - spins behind everything */
+        .gradient-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ccffcc, #7dd8f1, #cbbee2, #F5cc99);
+            border-radius: 50%;
+            z-index: 1;
+            opacity: 0;
+        }
+
+        /* Avatar image layer - stays on top, doesn't spin */
+        .avatar-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("../img/NEO_Avatar.png");
+            background-size: cover;
+            background-position: center;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Animation Container */
+        .viewport-svg {
+            width: 18px;
+            height: 12px;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .particle-path {
+            stroke: #2CE1B3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1px;
+            fill: none;
+            /* Ensures lines stay sharp when we scale the stars up */
+            vector-effect: non-scaling-stroke;
+        }
+
+        /* Status text for demo purposes */
+        #status-text {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            margin-top: -10px;
+            min-height: 20px;
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/MorphSVGPlugin.min.js"></script>
+</head>
+<body>
+
+    <!-- Demo use only -->
+    <div id="status-text">Status: System Idle</div>
+    <div class="emojifigure">
+        <div class="gradient-bg"></div>
+        <div class="avatar-layer"></div>
+        <svg class="viewport-svg" viewBox="-36 -24 72 48" fill="none">
+            <g id="scroll-group">
+                <g id="particle1"><path id="path1" class="particle-path" d=""></path></g>
+                <g id="particle2"><path id="path2" class="particle-path" d=""></path></g>
+                <g id="particle3"><path id="path3" class="particle-path" d=""></path></g>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Demo use only -->
+    <div class="controls">
+        <button onclick="simulateFullFlow()" class="auto-btn">▶ Simulate Full Process</button>
+        <!-- Dev buttons to test phases individually -->
+        <button onclick="startPhase1()">Data Collecting</button>
+        <button onclick="startPhase2()">Processing</button>
+        <button onclick="startPhase3()">Generating</button>
+    </div>
+
+    <script>
+        gsap.registerPlugin(MorphSVGPlugin);
+        
+        let currentAnimation; 
+        const statusText = document.getElementById('status-text');
+
+        // --- PATHS ---
+        const wavePath = "M -20 0 C -15 -12, -5 -12, 0 0 C 5 12, 15 12, 20 0";
+        const circle1 = "M20 0 A 20 20 0 1 1 -20 0 A 20 20 0 1 1 20 0"; 
+        const circle2 = "M15 0 A 15 15 0 1 1 -7.5 -12.99"; 
+        const circle3 = "M10 0 A 10 10 0 1 1 -5 -8.66"; 
+        const star1 = "M0 -20 L 5 -5 L 20 0 L 5 5 L 0 20 L -5 5 L -20 0 L -5 -5 Z"; 
+        const star2 = "M0 -15 L 3.75 -3.75 L 15 0 L 3.75 3.75 L 0 15 L -3.75 3.75 L -15 0 L -3.75 -3.75 Z"; 
+        const star3 = "M0 -10 L 2.5 -2.5 L 10 0 L 2.5 2.5 L 0 10 L -2.5 2.5 L -10 0 L -2.5 -2.5 Z"; 
+
+        function killOldAnimation() {
+            if (currentAnimation) currentAnimation.kill();
+            gsap.killTweensOf("#scroll-group, #particle1, #particle2, #particle3, #path1, #path2, #path3, .gradient-bg");
+        }
+
+        // --- PHASE 1: MONITORING (Infinite) ---
+        function startPhase1() {
+            statusText.innerText = "Status: Monitoring (Phase 1)";
+            killOldAnimation();
+
+            // 1. Housekeeping: Reset positions manually
+            gsap.set("#scroll-group", { x: 0 });
+            gsap.set("#particle1, #particle2, #particle3", { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 });
+            gsap.set(".gradient-bg", {
+                rotation: 0,
+                opacity: 0.8,
+                background: "#F4F9FF"
+            });
+
+            currentAnimation = gsap.timeline();
+            const segmentWidth = 40;
+
+            // Setup positions
+            currentAnimation.set("#particle1", { x: -segmentWidth });
+            currentAnimation.set("#particle2", { x: 0 });
+            currentAnimation.set("#particle3", { x: segmentWidth });
+            
+            // Morph to Wave
+            currentAnimation.to("#path1, #path2, #path3", { 
+                attr: { d: wavePath }, 
+                strokeDasharray: "none", 
+                duration: 0.5 
+            }, 0);
+
+            // Infinite Scroll
+            currentAnimation.to("#scroll-group", {
+                x: -segmentWidth,
+                duration: 0.5,
+                ease: "linear",
+                repeat: -1
+            }, 0);
+        }
+        
+        // --- PHASE 2: PROCESSING (Transition) ---
+        function startPhase2() {
+            statusText.innerText = "Status: Processing Data (Phase 2)";
+            killOldAnimation();
+
+            currentAnimation = gsap.timeline();
+            gsap.set("#scroll-group", { x: 0 });
+            currentAnimation.to("#particle1, #particle2, #particle3", {
+                x: 0, y: 0, rotation: 0, scale: 1,
+                duration: 0.6,
+                ease: "power3.inOut"
+            }, 0);
+
+            currentAnimation.to("#path1", { attr: { d: circle1 }, strokeDasharray: "1 1", duration: 0.6 }, 0);
+            currentAnimation.to("#path2", { attr: { d: circle2 }, strokeDasharray: "none", duration: 0.6 }, 0);
+            currentAnimation.to("#path3", { attr: { d: circle3 }, strokeDasharray: "none", duration: 0.6 }, 0);
+
+            // Transition to gradient and start spinning the gradient background
+            currentAnimation.to(".gradient-bg", {
+                background: "linear-gradient(135deg, #ccffcc, #7dd8f1, #cbbee2, #F5cc99)",
+                opacity: 0.8,
+                duration: 0.6
+            }, 0);
+            currentAnimation.to(".gradient-bg", { rotation: 360, duration: 1, ease: "none", repeat: -1 }, 0.6);
+
+            currentAnimation.to("#particle1", { rotation: 360, duration: 2, ease: "none", repeat: -1 }, 0.5);
+            currentAnimation.to("#particle2", { rotation: -360, duration: 1.5, ease: "none", repeat: -1 }, 0.5);
+            currentAnimation.to("#particle3", { rotation: 360, duration: 1, ease: "none", repeat: -1 }, 0.5);
+        }
+        
+        // --- PHASE 3: RESULT (Finite / Stops) ---
+        function startPhase3() {
+            statusText.innerText = "Status: Complete (Phase 3)";
+            killOldAnimation();
+
+            currentAnimation = gsap.timeline();
+            gsap.set("#scroll-group", { x: 0 });
+
+            currentAnimation.set("#particle1, #particle2, #particle3", {
+                x: 0, y: 0, scale: 0.2, opacity: 0, rotation: 0
+            }, 0);
+
+            currentAnimation.set("#path1", { attr: { d: star1 }, strokeDasharray: "none" }, 0);
+            currentAnimation.set("#path2", { attr: { d: star2 }, strokeDasharray: "none" }, 0);
+            currentAnimation.set("#path3", { attr: { d: star3 }, strokeDasharray: "none" }, 0);
+
+            // Fade back to solid color and reduce opacity
+            currentAnimation.to(".gradient-bg", {
+                background: "#F4F9FF",
+                opacity: 0.8,
+                duration: 4,
+                ease: "power2.out"
+            }, 0);
+
+            // 3. The Explosion (Pop out)
+            currentAnimation.to("#particle1", { x: 18, y: -8, scale: 1, opacity: 1, duration: 0.8, ease: "back.out(2)" }, 0);
+            currentAnimation.to("#particle2", { x: -10, y: -18, scale: 0.4, opacity: 1, duration: 0.8, ease: "back.out(2)" }, 0.1);
+            currentAnimation.to("#particle3", { x: -18, y: 8, scale: 0.6, opacity: 1, duration: 0.8, ease: "back.out(2)" }, 0.05);
+
+            // 4. Spin to Stop (Friction)
+            // Instead of repeat: -1, we rotate to a specific high value with 'power2.out' (decelerate)
+            const spinDuration = 4; 
+            
+            currentAnimation.to("#particle1", { 
+                rotation: 720, // 2 full spins
+                duration: spinDuration, 
+                ease: "power2.out" // Starts fast, slows to stop
+            }, 0);
+
+            currentAnimation.to("#particle2", { 
+                rotation: -540, // 1.5 spins reverse
+                duration: spinDuration, 
+                ease: "power2.out"
+            }, 0);
+
+            currentAnimation.to("#particle3", { 
+                rotation: 900, // 2.5 spins
+                duration: spinDuration, 
+                ease: "power2.out"
+            }, 0);
+
+            // 5. Final Pulse (Celebration)
+            // While spinning down, pulse size 3 times then stop
+            currentAnimation.to("#particle1, #particle2, #particle3", {
+                scale: "*=1.3",
+                duration: 0.5,
+                yoyo: true,
+                repeat: 3, // Pulse 3 times (approx 3 seconds)
+                ease: "sine.inOut"
+            }, 0.5);
+            
+            // Animation naturally ends here. The stars remain in their final positions.
+        }
+
+
+        // --- SIMULATION LOGIC ---
+        // This mimics your backend triggering the phases
+        function simulateFullFlow() {
+            // Start
+            startPhase1();
+
+            // Simulate data found after 3 seconds -> Switch to Processing
+            setTimeout(() => {
+                startPhase2();
+            }, 3000);
+
+            // Simulate data processed after another 3 seconds -> Switch to Result
+            setTimeout(() => {
+                startPhase3();
+            }, 6000);
+        }
+
+        // Init
+        startPhase1();
+
+    </script>    
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Line Flow - Perfect Alignment</title>
+    <style>
+        body {
+            margin: 0;
+            padding:20px;
+            background: #040822;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        .animation-section {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            contain: layout style paint;
+            background: #040822;
+        }
+
+        #animationContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            /* CRITICAL: This creates the coordinate space */
+            aspect-ratio: 1980 / 767;
+        }
+
+        /* All three layers use IDENTICAL sizing */
+        canvas, #animationSvg, #particleContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Prevent any margin/padding issues */
+            margin: 0;
+            padding: 0;
+            /* Use border-box to ensure exact sizing */
+            box-sizing: border-box;
+        }
+
+        /* Layer 1: Canvas background */
+        canvas {
+            z-index: 1;
+            display: block;
+        }
+
+        /* Layer 2: SVG animation */
+        #animationSvg {
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Layer 3: Particle overlay */
+        #particleContainer {
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .flow-line, .r-flow-line {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.9;
+            transform: translateZ(0);
+            will-change: transform;
+            stroke-dasharray: 0 100%;
+        }
+
+        /* Hide basepaths in SVG (rendered to canvas instead) */
+        #basePaths {
+            display: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js"></script>
+</head>
+<body>
+    <section class="animation-section">
+        <div id="animationContainer">
+            <!-- Layer 1: Canvas for static basepaths -->
+            <canvas id="animationCanvas"></canvas>
+            
+            <!-- Layer 2: SVG for animated flow lines -->
+            <svg id="animationSvg" viewBox="0 0 1980 767" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#32C7A9" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#32C7A9" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#32C7A9" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#32C7A9" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#74A3DD" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#74A3DD" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#74A3DD" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#74A3DD" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#EC7FEC" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#EC7FEC" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#EC7FEC" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#EC7FEC" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#F39B77" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#F39B77" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#F39B77" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#F39B77" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient5" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#2E69B5" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#2E69B5" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#2E69B5" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#2E69B5" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient6" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#54C6FB" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#54C6FB" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#54C6FB" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#54C6FB" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient7" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#51FDA3" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#51FDA3" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#51FDA3" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#51FDA3" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient8" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#7168EB" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#7168EB" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#7168EB" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#7168EB" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient9" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#0CA1E0" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#0CA1E0" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#0CA1E0" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#0CA1E0" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="gradient10" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#6AE7FB" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#6AE7FB" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#6AE7FB" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#6AE7FB" stop-opacity="0"/>
+                    </linearGradient>
+
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+
+                    <filter id="trailGlow">
+                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+     
+                <!-- BasePaths hidden but available for canvas rendering -->
+                <g id="basePaths">
+                    <path d="M4.24805 261.363 C225 366.5 378.5 334 436.246 313.615 C493.993 293.23 556.121 240.928 606.247 240.928 C656.374 240.928 701.747 281.077 751 294 C800.253 306.923 909.5 312 970 312"/>
+                    <path d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+                    <path d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+                    <path d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+                    <path d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+                    <path d="M4 581C253.301 367 507.156 313 970 313"/>
+                    <path d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+                    <path d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+                    <path d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+                    <path d="M4 765C504.854 313 495.053 313 970.5 313"/>
+                    <path d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+                    <path d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135"/>
+                    <path d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+                    <path d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348"/>
+                    <path d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347"/>
+                    <path d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135"/>
+                    <path d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+                    <path d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+                </g>   
+            
+                <!-- Animated flow lines (visible in SVG overlay) -->
+                <g id="flowLines">
+                    <path class="flow-line" id="path1" data-width="1.5" data-speed="2" stroke="url(#gradient1)" filter="url(#glow)" d="M4.24805 261.363 C225 366.5 378.5 334 436.246 313.615 C493.993 293.23 556.121 240.928 606.247 240.928 C656.374 240.928 701.747 281.077 751 294 C800.253 306.923 909.5 312 970 312"/>
+                    <path class="flow-line" id="path2" data-width="2" data-speed="2" stroke="url(#gradient2)" filter="url(#glow)" d="M4 104C16.7522 117.951 54.8478 147.972 109.212 156.444C177.168 167.034 216.935 152.41 279.857 167.034C342.779 181.658 430.808 266.576 475.671 286.041C554.701 320.332 594.468 318.819 669.974 320.332C730.379 321.542 894.993 313.504 970.5 313"/>
+                    <path class="flow-line" id="path3" data-width="1" data-speed="2.4" stroke="url(#gradient3)" filter="url(#glow)" d="M4 371C259.132 318.054 503.546 307.865 970.5 313"/>
+                    <path class="flow-line" id="path4" data-width="1" data-speed="2.6" stroke="url(#gradient4)" filter="url(#glow)" d="M4 601C504.854 322.017 504.027 283.772 970.5 313"/>
+                    <path class="flow-line" id="path5" data-width="2" data-speed="2.8" stroke="url(#gradient5)" filter="url(#glow)" d="M4 616C25.5222 621.327 74.8742 651.504 132.133 615.944C203.707 571.493 380.389 429.13 491.004 373.715C612.63 312.785 806.331 313 970.5 313"/>
+                    <path class="flow-line" id="path6" data-width="1.5" data-speed="3" stroke="url(#gradient6)" filter="url(#glow)" d="M4 581C253.301 367 507.156 313 970 313"/>
+                    <path class="flow-line" id="path7" data-width="3" data-speed="2.2" stroke="url(#gradient7)" filter="url(#glow)" d="M4 461C259.132 307.354 503.546 298.099 970.5 313"/>
+                    <path class="flow-line" id="path8" data-width="2" data-speed="2" stroke="url(#gradient8)" filter="url(#glow)" d="M4 294C37.2107 310.6 124.278 353.861 210.862 358.244C319.092 363.722 407.814 337.799 445.529 333.343C521.391 324.379 607.874 324.379 671.092 324.379C721.667 324.379 891.603 313 970.5 313"/>
+                    <path class="flow-line" id="path9" data-width="1" data-speed="1.6" stroke="url(#gradient9)" filter="url(#glow)" d="M4 174C70.205 188.527 354.593 343.055 970.5 313"/>
+                    <path class="flow-line" id="path10" data-width="3" data-speed="1.8" stroke="url(#gradient10)" filter="url(#glow)" d="M4 765C504.854 313 495.053 313 970.5 313"/>
+                </g>
+
+                <!-- Right side flow lines -->
+                <g id="rightFlowLines">
+                    <path class="r-flow-line" id="rpath1" data-speed="3" data-width="2" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1488.7 406.135 1977 406.135"/>
+                    <path class="r-flow-line" id="rpath2" data-speed="3" data-width="1" stroke="url(#gradient5)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1435.92 238.135 1977 238.135"/>
+                    <path class="r-flow-line" id="rpath3" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1435.92 362.135 1977 362.135"/>
+                    <path class="r-flow-line" id="rpath4" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1508.24 74.1348 1977 74.1348"/>
+                    <path class="r-flow-line" id="rpath5" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1696 311.135 1681 -71.8653 1977 16.1347"/>
+                    <path class="r-flow-line" id="rpath6" data-speed="3" data-width="2" stroke="url(#gradient5)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1553.22 509.135 1977 509.135"/>
+                    <path class="r-flow-line" id="rpath7" data-speed="3" data-width="2" stroke="url(#gradient9)" filter="url(#glow)" d="M972 313.135C1628.82 313.135 1491.07 437.135 1977 437.135"/>
+                    <path class="r-flow-line" id="rpath8" data-speed="3" data-width="1.5" stroke="url(#gradient1)" filter="url(#glow)" d="M972 311.135C1628.82 311.135 1807 171.135 1977 171.135"/>
+                </g>
+            </svg>
+        </div>
+    </section>
+
+    <script>
+        gsap.registerPlugin(DrawSVGPlugin);
+
+        // ===== GLOBAL VARIABLES =====
+        let observer = null;
+        let animationFrameId = null;
+        let canvas, ctx;
+        const SVG_WIDTH = 1980;
+        const SVG_HEIGHT = 767;
+        let isInViewport = true;
+        const maxTrailLength = 3;
+
+        // ===== CANVAS INITIALIZATION WITH PERFECT ALIGNMENT =====
+        function initializeCanvas() {
+            canvas = document.getElementById('animationCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set internal canvas size to match SVG viewBox
+            canvas.width = SVG_WIDTH;
+            canvas.height = SVG_HEIGHT;
+            
+            // Configure rendering
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            console.log(`✓ Canvas initialized: Internal Size ${canvas.width}x${canvas.height}. Display scaling handled by CSS.`);
+        }
+
+
+
+        // ===== RENDER STATIC BACKGROUND =====
+        function renderStaticCanvasBackground() {
+            if (!isInViewport) {
+                animationFrameId = requestAnimationFrame(renderStaticCanvasBackground);
+                return;
+            }
+
+            // Clear with background color
+            ctx.fillStyle = '#040822';
+            ctx.fillRect(0, 0, SVG_WIDTH, SVG_HEIGHT);
+
+            const baseGradient = ctx.createLinearGradient(0,0,SVG_WIDTH,0);
+            baseGradient.addColorStop(0,'#040822');
+            baseGradient.addColorStop(0.1,'#181e50');
+            baseGradient.addColorStop(0.9,'#181e50');
+            baseGradient.addColorStop(1,'#040822');
+
+            
+            // Draw basepaths using the EXACT same coordinate system as SVG
+            const basePaths = document.querySelectorAll('#basePaths path');
+            basePaths.forEach(pathElement => {
+                const pathData = pathElement.getAttribute('d');
+                const path2D = new Path2D(pathData);
+                
+                ctx.strokeStyle = baseGradient;
+                ctx.lineWidth = 0.8;
+                ctx.globalAlpha = 0.5;
+                ctx.stroke(path2D);
+                ctx.globalAlpha = 1.0;
+            });
+            
+            animationFrameId = requestAnimationFrame(renderStaticCanvasBackground);
+        }
+
+        // ===== PARTICLE CREATION =====
+        function createParticlesForPath(pathId, colorIndex) {
+            const colors = [
+                '#32C7A9', '#74A3DD', '#EC7FEC', '#F39B77', '#2E69B5',
+                '#54C6FB', '#51FDA3', '#7168EB', '#0CA1E0', '#6AE7FB'
+            ];
+            
+            const color = colors[colorIndex % colors.length];
+            
+            // Get or create particle container with SAME viewBox as main SVG
+            let particleContainer = document.getElementById('particleContainer');
+            if (!particleContainer) {
+                particleContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                particleContainer.id = 'particleContainer';
+                particleContainer.setAttribute('viewBox', `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`);
+                particleContainer.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                document.getElementById('animationContainer').appendChild(particleContainer);
+            }
+            
+            // Create main particle
+            const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            particle.setAttribute('id', `particle_${pathId}`);
+            particle.setAttribute('r', '3');
+            particle.setAttribute('fill', color);
+            particle.setAttribute('filter', 'url(#glow)');
+            particle.style.visibility = 'hidden';
+            particleContainer.appendChild(particle);
+            
+            // Create trail group
+            const trailGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            trailGroup.setAttribute('id', `trail_${pathId}`);
+            for (let j = 0; j < maxTrailLength; j++) {
+                const trailCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                trailCircle.setAttribute('r', '0');
+                trailCircle.setAttribute('fill', color);
+                trailCircle.setAttribute('filter', 'url(#trailGlow)');
+                trailCircle.style.visibility = 'hidden';
+                trailGroup.appendChild(trailCircle);
+            }
+            particleContainer.appendChild(trailGroup);
+        }
+
+        // ===== COMET ANIMATION =====
+        function animateCometStream(path, pathId, speed) {
+            const particle = document.getElementById(`particle_${pathId}`);
+            const trailGroup = document.getElementById(`trail_${pathId}`);
+            
+            if (!particle || !trailGroup) return;
+
+            const pathLength = path.getTotalLength();
+            const history = [];
+            const trailCircles = trailGroup.querySelectorAll('circle');
+
+            gsap.set(particle, { visibility: 'visible' });
+            gsap.set(trailCircles, { visibility: 'visible' });
+            
+            gsap.to({}, {
+                duration: speed,
+                ease: 'none',
+                onUpdate: function() {
+                    const progress = this.progress();
+                    // Get point in SVG coordinate space (matches canvas exactly)
+                    const point = path.getPointAtLength(progress * pathLength);
+
+                    // Calculate fade opacity
+                    const fadeStartProgress = 0.8;
+                    let opacityValue = 1;
+                    if (progress > fadeStartProgress) {
+                        opacityValue = 1 - ((progress - fadeStartProgress) / (1 - fadeStartProgress));
+                    }
+                    
+                    // Update particle position (no transform needed - coordinates match!)
+                    gsap.set(particle, {
+                        attr: { cx: point.x, cy: point.y },
+                        opacity: opacityValue,
+                        force3D: true
+                    });
+                    
+                    // Update trail history
+                    history.push({ x: point.x, y: point.y });
+                    if (history.length > maxTrailLength) {
+                        history.shift();
+                    }
+                    
+                    // Update trail circles
+                    history.forEach((pos, index) => {
+                        const alpha = (index + 1) / history.length * 0.6;
+                        const radius = 3 * ((index + 1) / history.length * 0.8 + 0.2);
+                        
+                        gsap.set(trailCircles[index], {
+                            attr: { cx: pos.x, cy: pos.y, r: radius },
+                            opacity: alpha,
+                            force3D: true
+                        });
+                    });
+
+                    // Hide unused circles
+                    for (let i = history.length; i < maxTrailLength; i++) {
+                        gsap.set(trailCircles[i], { attr: { r: 0 }, opacity: 0 });
+                    }
+                },
+                onComplete: function() {
+                    gsap.set(particle, { visibility: 'hidden', opacity: 0 });
+                    gsap.set(trailCircles, { attr: { r: 0 }, opacity: 0, visibility: 'hidden' });
+                }
+            });
+        }
+
+        // ===== PATH SELECTION =====
+        function getRandomPaths(pathArray, count = 3) {
+            const validPaths = pathArray.filter(p => p);
+            const shuffled = [...validPaths].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, Math.min(count, shuffled.length));
+        }
+       
+        // ===== PATH DRAWING ANIMATION =====
+        function animatePathDrawing(paths, initialDelay = 0) {
+            function animateSession() {
+                const selectedPaths = getRandomPaths(paths, 3);
+                let maxDuration = 0;
+
+                selectedPaths.forEach((path, pathIndex) => {
+                    if (!path) return;
+
+                    const speed = parseFloat(path.dataset.speed) || 2;
+                    const strokeWidth = parseFloat(path.dataset.width) || 2;
+                    const staggerDelay = pathIndex * 1.5;
+                    const pathId = path.id;
+
+                    const pathTotalDuration = staggerDelay + speed + 2 + 1.5 + 1;
+                    maxDuration = Math.max(maxDuration, pathTotalDuration);
+
+                    const timeline = gsap.timeline({ delay: initialDelay + staggerDelay });
+
+                    timeline.set(path, { strokeWidth: strokeWidth });
+                    timeline.fromTo(path,
+                        { drawSVG: "0%" },
+                        { drawSVG: "100%", duration: speed, ease: "power2.out" }
+                    );
+
+                    timeline.add(() => { 
+                        animateCometStream(path, pathId, speed);
+                    });
+                    timeline.to({}, { duration: speed });
+
+                    timeline.to(path, { 
+                        drawSVG: "100% 100%", 
+                        duration: 1.5, 
+                        ease: "power2.in" 
+                    });
+                    timeline.to({}, { duration: 1 });
+                });
+                
+                gsap.delayedCall(maxDuration, animateSession);
+            }
+
+            animateSession();
+        }
+
+        // ===== INITIALIZATION =====
+        function initializeAnimations() {
+            const leftFlowPaths = [
+                document.getElementById('path1'),
+                document.getElementById('path2'),
+                document.getElementById('path3'),
+                document.getElementById('path4'),
+                document.getElementById('path5'),
+                document.getElementById('path6'),
+                document.getElementById('path7'),
+                document.getElementById('path8'),
+                document.getElementById('path9'),
+                document.getElementById('path10')
+            ];
+            
+            const rightFlowPaths = [
+                document.getElementById('rpath1'),
+                document.getElementById('rpath2'),
+                document.getElementById('rpath3'),
+                document.getElementById('rpath4'),
+                document.getElementById('rpath5'),
+                document.getElementById('rpath6'),
+                document.getElementById('rpath7'),
+                document.getElementById('rpath8')
+            ];
+            
+            leftFlowPaths.forEach((path, i) => {
+                if (path) createParticlesForPath(path.id, i);
+            });
+            rightFlowPaths.forEach((path, i) => {
+                if (path) createParticlesForPath(path.id, i);
+            });
+
+            animatePathDrawing(leftFlowPaths, 0);
+            animatePathDrawing(rightFlowPaths, 0.8);
+            
+            console.log('✓ Animations initialized');
+        }
+
+        // ===== VIEWPORT OBSERVER =====
+        function setupIntersectionObserver() {
+            const animationSection = document.querySelector('.animation-section');
+            
+            observer = new IntersectionObserver(entries => {
+                isInViewport = entries[0].isIntersecting;
+                
+                if (isInViewport) {
+                    console.log('▶ Animation resumed');
+                    gsap.globalTimeline.play();
+                } else {
+                    console.log('⏸ Animation paused');
+                    gsap.globalTimeline.pause();
+                }
+            }, { threshold: 0.1 });
+            
+            observer.observe(animationSection);
+            console.log('✓ Viewport observer active');
+        }
+
+        // ===== STARTUP =====
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Starting River Line Flow - Perfect Alignment Mode');
+            
+            initializeCanvas();
+            setupIntersectionObserver();
+            initializeAnimations();
+            renderStaticCanvasBackground();
+            
+            console.log('✓ All systems ready - layers perfectly aligned!');
+        });
+
+        // ===== CLEANUP =====
+        window.addEventListener('beforeunload', () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (observer) {
+                observer.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>
