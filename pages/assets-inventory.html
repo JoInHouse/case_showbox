@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assets inventory — DevAI NEO</title>
+  <!--
+    DevAI NEO — Discovery Agent, Assets Inventory.
+    One page, two switchable presentations of the same connector data:
+      · Cards view  — one card per connector, device-type rows with
+                      count + data-completeness pill.
+      · Matrix view — connectors × device-type table, same numbers.
+    Both views render from a single mock dataset so counts, completeness
+    bands and legend colors always agree. GSAP handles the view cross-
+    fade and row/card stagger. Light theme only, no build step.
+  -->
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    /* ============================================================
+       Page-scoped styles. Completeness band colors come straight
+       from the Figma semantics (neo-pink / neo-apricot / neo-mint)
+       and are shared by the legend and every pill in both views.
+       ============================================================ */
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--neo-app-bg); }
+    .neo-app { padding-top: var(--space-3); }
+
+    :root {
+      /* Band colors: <60% | 60–79% | ≥80%  (bg / fg pairs) */
+      --inv-low-bg:  var(--neo-pink);          /* #FFDDEE */
+      --inv-low-fg:  var(--neo-danger-2);      /* #EC2138 */
+      --inv-mid-bg:  #FEE9E1;                  /* Figma: neo-apricot */
+      --inv-mid-fg:  var(--neo-danger);        /* #E95F35 */
+      --inv-high-bg: #DAFFEF;                  /* Figma: neo-mint */
+      --inv-high-fg: #1CA24E;                  /* green text on mint */
+    }
+
+    /* ---------- Left rail (same shell as discrepancy-comparison) ---------- */
+    .inv-rail {
+      padding: var(--space-3) var(--space-2); gap: var(--space-1); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+      align-self: start;
+    }
+    .inv-rail__brand {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-1) var(--space-2) var(--space-3);
+    }
+    .inv-rail__brand .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .inv-rail__brand .txt .t { font-weight: 700; font-size: var(--text-sm); color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .inv-rail__brand .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); }
+    .inv-rail__collapse { margin-left: auto; width: 20px; height: 20px; display: grid; place-items: center; cursor: pointer; color: var(--neo-fg-3); border-radius: var(--radius-sm); }
+    .inv-rail__collapse:hover { background: var(--neo-bg-2); }
+
+    /* Environment selector (present in both mockups, sits under the brand) */
+    .inv-env {
+      display: flex; align-items: center; gap: var(--space-2); width: 100%;
+      padding: var(--space-1) var(--space-2); height: 40px;
+      border: 1px solid var(--neo-indigo-hair); border-radius: var(--radius-sm);
+      background: var(--neo-surface); cursor: pointer; text-align: left;
+      margin-bottom: var(--space-2);
+    }
+    .inv-env:hover { background: var(--neo-bg-2); }
+    .inv-env .ic { flex: 0 0 16px; display: grid; place-items: center; color: var(--neo-fg-2); }
+    .inv-env .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+    .inv-env .txt .k { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--neo-fg-3); line-height: var(--lh-tight); }
+    .inv-env .txt .v { font-size: var(--text-xs); font-weight: 700; color: var(--neo-fg-1); line-height: var(--lh-snug); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-env > img { flex-shrink: 0; }
+
+    .inv-newchat {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1);
+      cursor: pointer; margin-bottom: var(--space-1);
+    }
+    .inv-newchat:hover { background: var(--neo-bg-2); }
+
+    .inv-rail__section {
+      font-size: var(--text-xs); color: var(--neo-fg-4); font-weight: 600;
+      padding: var(--space-3) var(--space-2) var(--space-1);
+      letter-spacing: .02em;
+    }
+    .inv-newchat + .inv-rail__scroll > .inv-rail__section:first-child { padding-top: 0; }
+    .inv-rail__scroll { overflow-y: auto; flex: 1; min-height: 0; margin-right: calc(var(--space-1) * -1); padding-right: var(--space-1); }
+    .inv-rail__scroll .neo-sidebar__item { height: 28px; padding: 0 10px; margin: 0; }
+    .neo-sidebar__item .ic { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; color: currentColor; }
+    .neo-sidebar__item .ic img,
+    .neo-sidebar__item .ic svg { display: block; }
+    .neo-sidebar__item.active .ic { color: #fff; }
+
+    .inv-rail__foot {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-2) var(--space-1);
+      border-top: 1px solid var(--neo-indigo-100); margin-top: var(--space-2);
+    }
+    .inv-rail__foot .av {
+      width: 32px; height: 32px; border-radius: var(--radius-pill); flex-shrink: 0;
+      background: var(--neo-indigo); color: #fff; display: grid; place-items: center;
+      font-weight: 700; font-size: var(--text-xs);
+    }
+    .inv-rail__foot .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .inv-rail__foot .txt .t { font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .inv-rail__foot .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .inv-rail__foot .gear { margin-left: auto; color: var(--neo-fg-3); cursor: pointer; display: grid; place-items: center; }
+
+    /* ---------- Main panel: fixed cap on top, only the results scroll ---------- */
+    .neo-main {
+      display: flex; flex-direction: column; gap: var(--space-4); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+    }
+    .inv-panel__fixed { display: flex; flex-direction: column; gap: var(--space-4); flex-shrink: 0; }
+
+    /* ---------- Page tabs ---------- */
+    .inv-tabs { display: flex; align-items: center; gap: var(--space-5); }
+    .inv-tab {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      height: 34px; padding: 0 var(--space-3);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-sm); font-weight: 600;
+      color: var(--neo-fg-1); cursor: pointer;
+    }
+    .inv-tab:hover { background: var(--neo-bg-2); }
+    .inv-tab.active {
+      background: var(--neo-link); border-color: var(--neo-link); color: #fff;
+      box-shadow: var(--shadow-1);
+    }
+    .inv-tab svg { flex-shrink: 0; }
+
+    /* ---------- Toolbar: Cards/Matrix switch + Refresh ---------- */
+    /* Pill-shaped switch: full round corners set it apart from the squared primary tabs above. */
+    .inv-toolbar .neo-toolbar__switch { border: 1px solid var(--neo-indigo-hair); padding: 3px; background: var(--neo-bg); border-radius: var(--radius-pill); }
+    .inv-toolbar .neo-toolbar__switch button { padding: 5px 12px; border-radius: var(--radius-pill); }
+    .inv-toolbar .neo-toolbar__switch svg { width: 14px; height: 14px; }
+    .inv-refresh {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      height: 34px; padding: 0 var(--space-4);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-pill);
+      background: var(--neo-surface); font-size: var(--text-xs); font-weight: 600;
+      color: var(--neo-fg-1); cursor: pointer;
+    }
+    .inv-refresh:hover { background: var(--neo-bg-2); }
+    .inv-refresh svg { color: var(--neo-fg-2); }
+    @keyframes inv-spin { to { transform: rotate(360deg); } }
+    .inv-refresh.busy svg { animation: inv-spin .7s linear infinite; transform-origin: center; color: var(--neo-indigo); }
+
+    /* ---------- Legend / condition row ---------- */
+    .inv-legend {
+      display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+      font-size: var(--text-xs); color: var(--neo-fg-1);
+    }
+    .inv-legend .cnt { font-weight: 700; }
+    .inv-legend__group { display: inline-flex; align-items: center; gap: var(--space-2); }
+    .inv-legend__group .k { color: var(--neo-fg-2); }
+    .inv-legend__hint { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--neo-fg-3); }
+    .inv-legend__mark { color: var(--neo-fg-4); font-weight: 700; }
+    .inv-legend .spacer { flex: 1; }
+    .inv-freshctl { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--neo-fg-1); cursor: pointer; user-select: none; }
+
+    /* Toggle switch (32×16, matches mockup) */
+    .inv-switch { position: relative; display: inline-flex; width: 32px; height: 16px; cursor: pointer; }
+    .inv-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .inv-switch i {
+      width: 100%; height: 100%; border-radius: var(--radius-pill);
+      background: var(--neo-fg-4); transition: background 160ms ease;
+    }
+    .inv-switch i::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+      border-radius: var(--radius-pill); background: #fff; box-shadow: var(--shadow-1);
+      transition: transform 160ms ease;
+    }
+    .inv-switch input:checked + i { background: var(--neo-link); }
+    .inv-switch input:checked + i::after { transform: translateX(16px); }
+
+    /* ---------- Completeness pill (legend + both views share this) ---------- */
+    .inv-pill {
+      display: inline-flex; align-items: center; gap: 2px;
+      padding: 1px var(--space-2); border-radius: var(--radius-pill);
+      font-size: 11px; font-weight: 700; line-height: var(--lh-snug);
+      white-space: nowrap;
+    }
+    .inv-pill.low  { background: var(--inv-low-bg);  color: var(--inv-low-fg); }
+    .inv-pill.mid  { background: var(--inv-mid-bg);  color: var(--inv-mid-fg); }
+    .inv-pill.high { background: var(--inv-high-bg); color: var(--inv-high-fg); }
+    /* Score pills are buttons (they open the completeness detail page):
+       hover deepens each band's own fill so the affordance keeps its color code. */
+    .inv-pill[data-score] { cursor: pointer; transition: background 120ms ease; }
+    .inv-pill.low[data-score]:hover  { background: #FFC9E2; }
+    .inv-pill.mid[data-score]:hover  { background: #FDD8C9; }
+    .inv-pill.high[data-score]:hover { background: #C0F5DF; }
+    .inv-pill svg { flex-shrink: 0; }
+
+    /* ---------- Scrolling results region ---------- */
+    .inv-content { flex: 1; min-height: 0; overflow-y: auto; padding: 2px; }
+
+    /* ---------- Cards view ---------- */
+    .inv-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: var(--space-6);
+      align-items: stretch;
+    }
+    .inv-card { display: flex; flex-direction: column; box-shadow: var(--shadow-1); }
+    .inv-card__head {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-4) var(--space-5) var(--space-3);
+      border-bottom: 1px solid var(--neo-border);
+    }
+    .inv-card__head img { width: 20px; height: 20px; flex-shrink: 0; }
+    .inv-card__head .nm { font-size: var(--text-sm); font-weight: 700; color: var(--neo-fg-1); }
+    .inv-card__head .tag {
+      font-size: 11px; font-weight: 600; color: var(--neo-fg-3);
+      background: var(--neo-indigo-light-100); border-radius: var(--radius-sm);
+      padding: 2px var(--space-2); white-space: nowrap;
+    }
+    .inv-card__head .spacer { flex: 1; }
+    .inv-card__head .total { display: inline-flex; align-items: baseline; gap: var(--space-1); }
+    .inv-card__head .total .n { font-size: var(--text-lg); font-weight: 700; color: var(--neo-fg-1); letter-spacing: -0.01em; }
+    .inv-card__head .total .u { font-size: var(--text-xs); color: var(--neo-fg-3); }
+
+    /* Shared row grid so the column headers line up with the values */
+    .inv-card__cols, .inv-row {
+      display: grid; grid-template-columns: 1fr 72px 118px;
+      gap: var(--space-2); align-items: center;
+      padding: 0 var(--space-5);
+    }
+    .inv-card__cols {
+      padding-top: var(--space-2); padding-bottom: var(--space-1);
+      font-size: 11px; color: var(--neo-fg-2); font-weight: 600;
+    }
+    .inv-card__cols .c { text-align: right; }
+    .inv-row { padding-top: var(--space-2); padding-bottom: var(--space-2); cursor: pointer; }
+    /* Whole bar is the hit target: soft indigo fill on hover/keyboard focus,
+       and the count value underlines to show where the click leads. */
+    .inv-row:hover, .inv-row:focus-visible { background: var(--neo-indigo-50); outline: none; }
+    .inv-row:hover .cnt, .inv-row:focus-visible .cnt { color: var(--neo-link); text-decoration: underline; text-underline-offset: 2px; }
+    .inv-row .lbl { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .inv-row .lbl .t { font-size: var(--text-xs); font-weight: 700; color: var(--neo-fg-1); }
+    .inv-row.sub .lbl .t { font-weight: 400; color: var(--neo-fg-2); }
+    /* Sub-metric rows (e.g. Server utilization under Servers): indented, with a
+       tree elbow reaching up to the parent row to show the parent–child relation. */
+    .inv-row.sub .lbl { margin-left: 18px; position: relative; }
+    .inv-row.sub .lbl::before {
+      content: ''; position: absolute; left: -12px; top: -12px; bottom: 55%; width: 9px;
+      border-left: 1.5px solid var(--neo-fg-5); border-bottom: 1.5px solid var(--neo-fg-5);
+      border-bottom-left-radius: 6px;
+    }
+    .inv-row .cnt {
+      display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px;
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1); cursor: pointer;
+    }
+    .inv-row .cnt svg { color: var(--neo-fg-4); }
+    .inv-row .cnt:hover { color: var(--neo-link); }
+    .inv-row .pillcell { display: flex; justify-content: flex-end; }
+    .inv-card__body { padding-bottom: var(--space-2); }
+
+    /* Freshness line ("2h ago" + clock) — hidden when the toggle is off */
+    .inv-fresh {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      font-size: 11px; color: var(--neo-fg-4); line-height: var(--lh-tight);
+    }
+    .inv-fresh svg { flex-shrink: 0; }
+    .fresh-off .inv-fresh { display: none; }
+
+    /* ---------- Matrix view ---------- */
+    .inv-tablewrap { border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md); overflow: hidden; }
+    .inv-matrix { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-xs); }
+    .inv-matrix th {
+      position: sticky; top: 0; z-index: 5;
+      background: var(--neo-indigo-50); color: var(--neo-fg-1); font-weight: 600;
+      text-align: right; padding: var(--space-3) var(--space-3);
+      border-bottom: 1px solid var(--neo-indigo-100); white-space: nowrap;
+    }
+    .inv-matrix th:first-child { text-align: left; width: 150px; }
+    .inv-matrix th:nth-child(2) { width: 96px; }
+    .inv-matrix td {
+      padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--neo-border);
+      vertical-align: middle; text-align: right;
+    }
+    /* Column rules for cross-checking: faintest hairline so the eye can track
+       a column through empty cells without the grid competing with the data.
+       Connectors + Total devices read as one row-header unit (the total is
+       sub-info of the connector, not a data column), so the rule starts at
+       the first device-type column instead of running between every pair. */
+    .inv-matrix td:nth-child(n+3), .inv-matrix th:nth-child(n+3) { border-left: 1px solid var(--neo-border); }
+    .inv-matrix tbody tr:last-child td { border-bottom: none; }
+    /* Crosshair hover: only the hovered cell fills, while its row title and
+       column header light up so the user always knows which system × device
+       type they are reading. Headers get a stronger tint than the cell. */
+    .inv-matrix tbody td:hover,
+    .inv-matrix tbody td:focus-visible { background: var(--neo-bg-3); outline: none; }
+    /* Cell = primary action (opens the device-type detail for that connector):
+       pointer everywhere in the cell, and the key count underlines on
+       hover/focus. Hovering the utilization sub-row suppresses the underline —
+       that strip is its own action and shouldn't look like both fire at once. */
+    .inv-matrix tbody td[role="button"] { cursor: pointer; }
+    .inv-matrix tbody td:hover .inv-cell > .n,
+    .inv-matrix tbody td:focus-visible .inv-cell > .n { text-decoration: underline; text-underline-offset: 2px; }
+    .inv-matrix tbody td:has(.inv-cell__sub:hover) .inv-cell > .n { text-decoration: none; }
+    .inv-matrix tbody td.connector.is-hl,
+    .inv-matrix tbody td.totaldev.is-hl { background: var(--neo-indigo-light-200); }
+    .inv-matrix thead th.is-hl { background: var(--neo-indigo-light-200); }
+    /* Day-0 helper: "Data completeness:" caption leads into the score pill on
+       cell hover. It lives on its own permanently-reserved line right above the
+       pill (visibility toggle, not display), so cell and column dimensions are
+       identical hovered or not — nothing shifts while scanning the table.
+       Inline placement was tried first but cannot fit the ~146px data columns.
+       Sits close to the pill it labels (and far from the count above) so
+       proximity alone makes clear which value it's captioning. */
+    .inv-cell .dc-k {
+      font-size: 10px; line-height: 12px; color: var(--neo-fg-2); white-space: nowrap;
+      visibility: hidden; opacity: 0; transition: opacity 120ms ease;
+      margin-bottom: 2px;
+    }
+    .inv-matrix tbody td:hover .dc-k,
+    .inv-matrix tbody td:focus-visible .dc-k { visibility: visible; opacity: 1; }
+    .inv-matrix .conn { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 700; color: var(--neo-fg-1); }
+    .inv-matrix .conn img { width: 16px; height: 16px; }
+    .inv-matrix td.connector { text-align: left; }
+    .inv-matrix td.totaldev { font-weight: 600; color: var(--neo-fg-1); }
+    .inv-cell { display: flex; flex-direction: column; align-items: flex-end; }
+    .inv-cell .n { font-size: var(--text-md); font-weight: 600; color: var(--neo-link); cursor: pointer; line-height: var(--lh-snug); margin-bottom: 5px; }
+    .inv-cell .n:hover { text-decoration: underline; }
+    /* Footnoted value (e.g. ServiceNow Servers "343*"): dashed underline is a
+       permanent marker — independent of the pointer/hover "this navigates"
+       cue — so a day-0 user spots it's worth a hover before they even touch it. */
+    /* Shared with card view's .cnt value — same marker, same meaning either view. */
+    .n.has-note { border-bottom: 1px dashed var(--neo-fg-4); padding-bottom: 1px; }
+    .inv-cell .meta { display: inline-flex; align-items: center; gap: var(--space-1); }
+    .inv-cell .sep { color: var(--neo-fg-4); }
+    .inv-cell__sub {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+      width: 100%; margin-top: var(--space-1); padding: var(--space-1) var(--space-1) 2px;
+      border-top: 1px solid var(--neo-border); border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      font-size: 11px; color: var(--neo-fg-3);
+      cursor: pointer;
+    }
+    .inv-cell__sub .v { color: var(--neo-link); font-weight: 600; }
+    /* Sub-metric is its own click target (navigates to the utilization page):
+       hover fills just this row, not the whole cell, and underlines the value. */
+    .inv-cell__sub:hover { background: var(--neo-indigo-50); color: var(--neo-fg-2); }
+    .inv-cell__sub:hover .v { text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ---------- Footnote balloon (Figma: "Balloon of the selection") ----------
+       Fixed-position so it escapes .inv-tablewrap's overflow:hidden (needed
+       for the rounded table corners) instead of being clipped near row 1.
+       Solid fill (not the mockup's translucent black) — a see-through card
+       let the table underneath show through and hurt legibility. */
+    .inv-balloon {
+      position: fixed; z-index: 60; width: max-content; max-width: 220px;
+      background: var(--neo-fg-1); border: 1px solid var(--neo-fg-3);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-2);
+      padding: var(--space-4);
+      display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2);
+      pointer-events: none; opacity: 0; transition: opacity 120ms ease;
+    }
+    .inv-balloon.is-open { opacity: 1; }
+    .inv-balloon__title { font-size: var(--text-sm); color: #fff; line-height: var(--lh-snug); text-align: left; }
+    .inv-balloon__list { display: flex; flex-direction: column; gap: var(--space-2); list-style: none; margin: 0; padding: 0; width: 100%; }
+    .inv-balloon__list li { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: #fff; white-space: nowrap; text-align: left; }
+    .inv-balloon__list li svg { flex-shrink: 0; }
+
+    .neo-hidden { display: none !important; }
+
+    @media (max-width: 1100px) {
+      .inv-matrix { min-width: 900px; }
+      .inv-tablewrap { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="neo-app">
+  <div class="neo-body">
+
+    <!-- ============ Left rail (Discovery Agent context) ============ -->
+    <aside class="neo-sidebar inv-rail">
+      <div class="inv-rail__brand">
+        <span class="neo-topbar__avatar" style="width:40px;height:40px;border-radius:var(--radius-lg);">
+          <img src="../img/NEO_Avatar.png" alt="">
+        </span>
+        <span class="txt">
+          <span class="t">DevAI NEO</span>
+          <span class="s">Network Intelligence Engine</span>
+        </span>
+        <span class="inv-rail__collapse" title="Collapse rail" aria-label="Collapse rail">
+          <img src="../img/Objects/LeftSidePanel.svg" width="14" height="14" alt="">
+        </span>
+      </div>
+
+      <button class="inv-env" title="Switch environment">
+        <span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4.6 11.5a2.8 2.8 0 0 1-.3-5.59A3.8 3.8 0 0 1 11.7 6.7a2.4 2.4 0 0 1-.3 4.8H4.6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <circle cx="6" cy="13.4" r="1" fill="currentColor"/><circle cx="10" cy="13.4" r="1" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="txt">
+          <span class="k">Environment</span>
+          <span class="v">DevAI Demo (14 connects)</span>
+        </span>
+        <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+      </button>
+
+      <div class="inv-newchat">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        New chat
+      </div>
+
+      <div class="inv-rail__scroll">
+        <div class="inv-rail__section">Agents</div>
+        <div class="neo-sidebar__item active" data-nav="discovery"><span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="4.2" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M10.2 10.2L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M7 5.2v3.6M5.2 7h3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+          </svg>
+        </span><span>Discovery Agent</span></div>
+        <div class="neo-sidebar__item" data-nav="discrepancy"><span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M3 8h10M3 11h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span><span>Discrepancy Agent</span></div>
+        <div class="neo-sidebar__item" data-nav="location"><span class="ic">
+          <img src="../img/Objects/Location.svg" width="16" height="16" alt="">
+        </span><span>Location View</span></div>
+
+        <div class="inv-rail__section">Insights</div>
+        <div class="neo-sidebar__item" data-nav="i1"><span class="ic">
+          <img src="../img/Objects/IncidentCheck.svg" width="16" height="16" alt="">
+        </span><span>Incident insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i2"><span class="ic">
+          <img src="../img/Objects/IP_Device.svg" width="16" height="16" alt="">
+        </span><span>IP &amp; device insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i3"><span class="ic">
+          <img src="../img/Objects/Server.svg" width="16" height="16" alt="">
+        </span><span>Server &amp; application</span></div>
+        <div class="neo-sidebar__item" data-nav="i4"><span class="ic"><img src="../img/Sys/Jira_Outline.svg" width="16" height="16" alt=""></span><span>Jira Issue</span></div>
+        <div class="neo-sidebar__item" data-nav="i5"><span class="ic"><img src="../img/Sys/Zabbix_14x14_outline.svg" width="16" height="16" alt=""></span><span>Zabbix problems</span></div>
+        <div class="neo-sidebar__item" data-nav="i6"><span class="ic">
+          <img src="../img/Objects/IPAddressPlanning.svg" width="16" height="16" alt="">
+        </span><span>IP Planning</span></div>
+
+        <div class="inv-rail__section">Working Topics</div>
+        <div class="neo-sidebar__item" data-nav="t1"><span>General knowledge</span></div>
+        <div class="neo-sidebar__item" data-nav="t2"><span>Outrage incident</span></div>
+        <div class="neo-sidebar__item" data-nav="t3"><span>Planning &amp; architecture</span></div>
+        <div class="neo-sidebar__item" data-nav="t4"><span>Compliance review</span></div>
+
+        <div class="inv-rail__section">Recent Chats</div>
+        <div class="neo-sidebar__item" data-nav="c1"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>IP address' inquiry of 10.11.128.3</span></div>
+        <div class="neo-sidebar__item" data-nav="c2"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Device check on Location JFK08</span></div>
+        <div class="neo-sidebar__item" data-nav="c3"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Workflow review on discrepancies</span></div>
+      </div>
+
+      <div class="inv-rail__foot">
+        <span class="av">JZ</span>
+        <span class="txt">
+          <span class="t">Josephzou</span>
+          <span class="s">josephzou@dev_ai.com</span>
+        </span>
+        <span class="gear" title="Settings"><img src="../img/Controls/Settings.svg" width="16" height="16" alt="Settings"></span>
+      </div>
+    </aside>
+
+    <!-- ============ Main panel ============ -->
+    <main class="neo-main">
+      <div class="inv-panel__fixed">
+
+        <!-- Page tabs -->
+        <div class="inv-tabs">
+          <button class="inv-tab active" data-tab="inventory">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="1.5" y="1.5" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <rect x="8.1" y="1.5" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <rect x="1.5" y="8.1" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <rect x="8.1" y="8.1" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+            Assets Inventory
+          </button>
+          <button class="inv-tab" data-tab="completeness">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 11a5.4 5.4 0 1 1 10 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M7 11L9.6 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            Data completeness score
+          </button>
+          <button class="inv-tab" data-tab="location">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 12.6S3 8.9 3 5.9a4 4 0 1 1 8 0c0 3-4 6.7-4 6.7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+              <circle cx="7" cy="5.9" r="1.4" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+            Location overview
+          </button>
+        </div>
+
+        <!-- Cards/Matrix switch + refresh -->
+        <div class="neo-toolbar inv-toolbar" style="margin-bottom:0;">
+          <div class="neo-toolbar__switch" id="viewSwitch">
+            <button class="active" data-view="cards">
+              <svg viewBox="0 0 14 14" fill="none">
+                <rect x="1.5" y="1.5" width="4.6" height="4.6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                <rect x="7.9" y="1.5" width="4.6" height="4.6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                <rect x="1.5" y="7.9" width="4.6" height="4.6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                <rect x="7.9" y="7.9" width="4.6" height="4.6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+              Cards
+            </button>
+            <button data-view="matrix">
+              <svg viewBox="0 0 14 14" fill="none">
+                <rect x="1.5" y="2" width="11" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M1.5 5.4h11M5.4 5.4v6.6M9.2 5.4v6.6" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+              Matrix
+            </button>
+          </div>
+          <span class="neo-toolbar__spacer"></span>
+          <button class="inv-refresh" id="refreshBtn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M12 7A5 5 0 1 1 9.9 2.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M10 1v2.4h2.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Refresh data
+          </button>
+        </div>
+
+        <!-- Legend / condition row -->
+        <div class="inv-legend">
+          <span class="cnt" id="connectorCount">7 Connectors</span>
+          <span class="inv-legend__group">
+            <span class="k">Data completeness:</span>
+            <span class="inv-pill low"  data-band="low">&lt;60%</span>
+            <span class="inv-pill mid"  data-band="mid">60-79%</span>
+            <span class="inv-pill high" data-band="high">&ge;80%</span>
+          </span>
+          <span class="inv-legend__hint">
+            <span class="inv-legend__mark">*</span>
+            Hover to view the condition details
+          </span>
+          <span class="spacer"></span>
+          <label class="inv-freshctl">
+            <span class="inv-switch"><input type="checkbox" id="freshToggle" checked><i></i></span>
+            Show data freshness
+          </label>
+        </div>
+      </div>
+
+      <!-- Scrolling results region: the two switchable views live here -->
+      <div class="inv-content" id="contentRegion">
+        <div class="inv-grid" id="cardsView"></div>
+        <div class="inv-tablewrap neo-hidden" id="matrixView">
+          <table class="inv-matrix">
+            <thead><tr id="matrixHead"></tr></thead>
+            <tbody id="matrixBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Footnote balloon: positioned via JS on hover/focus of any .has-note value -->
+<div class="inv-balloon" id="dataBalloon" role="tooltip">
+  <div class="inv-balloon__title" id="dataBalloonTitle"></div>
+  <ul class="inv-balloon__list" id="dataBalloonList"></ul>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/* ============================================================
+   Assets Inventory — Cards & Matrix over one mock dataset.
+   All numbers are placeholders; the point is that both views,
+   the totals and the legend bands always agree because they
+   are derived from this single source.
+   ============================================================ */
+
+// Matrix column order (after Connectors / Total devices)
+const TYPE_COLUMNS = ['Servers', 'Physical servers', 'Virtual machines', 'Network devices', 'FIs', 'Chassis'];
+
+// Footnote balloon content for ServiceNow's Servers cell: explains which
+// asset statuses roll into that count — matches the connector's own
+// "Retired excluded" tag (Retired is the one unchecked status below).
+const STATUS_FOOTNOTE = {
+  title: 'Include server with status of:',
+  items: [
+    { label: 'Installed',       on: true },
+    { label: 'On order',        on: true },
+    { label: 'In maintenance',  on: true },
+    { label: 'Pending install', on: true },
+    { label: 'Pending repair',  on: true },
+    { label: 'In stock',        on: true },
+    { label: 'Retired',         on: false },
+    { label: 'Stolen',          on: true },
+    { label: 'Absent',          on: true }
+  ]
+};
+
+// rows[].sub = secondary metric shown under the same device type.
+// fresh = age of the last pull for that device type.
+const CONNECTORS = [
+  {
+    id: 'servicenow', name: 'ServiceNow', icon: 'SN_16x16_Disc.svg', tag: 'Retired excluded',
+    rows: [
+      { type: 'Servers',          count: 343,  score: 53, fresh: '2h', note: STATUS_FOOTNOTE },
+      { type: 'Network devices',  count: 2167, score: 84, fresh: '7h' },
+      { type: 'Physical servers', count: 22,   score: 52, fresh: '2h' },
+      { type: 'Virtual machines', count: 2318, score: 58, fresh: '2h' },
+      { type: 'Chassis',          count: 4,    score: 87, fresh: '2d' },
+      { type: 'FIs',              count: 14,   score: 74, fresh: '6d' }
+    ]
+  },
+  {
+    id: 'intersight', name: 'Cisco Intersight', icon: 'CiscoIntersight_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers',          count: 100, score: 100, fresh: '2h' },
+      { type: 'Physical servers', count: 70,  score: 86,  fresh: '2h' },
+      { type: 'Chassis',          count: 100, score: 100, fresh: '2d' },
+      { type: 'FIs',              count: 50,  score: 75,  fresh: '6d' }
+    ]
+  },
+  {
+    id: 'vrops', name: 'VMware vROps', icon: 'VMW_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers',          count: 345,  score: 70, fresh: '6d', sub: { label: 'Server utilization', count: 286 } },
+      { type: 'Virtual machines', count: 2201, score: 52, fresh: '2h' }
+    ]
+  },
+  {
+    id: 'netbox', name: 'Netbox', icon: 'Netbox_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers',         count: 101,   score: 91, fresh: '2h' },
+      { type: 'Network devices', count: 10699, score: 98, fresh: '2h' }
+    ]
+  },
+  {
+    id: 'zabbix', name: 'Zabbix', icon: 'Zabbix_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers', count: 104, score: 91, fresh: '2h', sub: { label: 'Server utilization', count: 9 } }
+    ]
+  },
+  {
+    id: 'dynatrace', name: 'Dynatrace', icon: 'DynaTrance_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers', count: 5, score: 91, fresh: '2h', sub: { label: 'Server utilization', count: 5 } }
+    ]
+  },
+  {
+    id: 'nautobot', name: 'Nautobot', icon: 'Nautobot_16x16_Disc.svg',
+    rows: [
+      { type: 'Servers', count: 10960, score: 98, fresh: '2h' }
+    ]
+  }
+];
+
+const $ = sel => document.querySelector(sel);
+const fmt = n => n.toLocaleString('en-US');
+const bandOf = score => score < 60 ? 'low' : score < 80 ? 'mid' : 'high';
+const total = c => c.rows.reduce((s, r) => s + r.count, 0);
+
+const CHEVRON = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CLOCK = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1"/><path d="M5 2.8V5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>';
+const CHECK_ON  = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="12" rx="3" fill="#0876F5" stroke="#0876F5"/><path d="M3.4 6.6L5.3 8.5L9.4 4.2" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK_OFF = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="12" rx="3" fill="none" stroke="rgba(255,255,255,0.45)"/></svg>';
+
+function pillHTML(row) {
+  const band = bandOf(row.score);
+  // 100% has nothing to investigate — no chevron and no button affordance,
+  // since both exist to say "see what's wrong on the detail page".
+  if (row.score === 100) return `<span class="inv-pill ${band} is-full">100%</span>`;
+  return `<span class="inv-pill ${band}" data-score="${row.score}" data-fresh="${row.fresh}">${row.score}%${CHEVRON}</span>`;
+}
+
+// ---------- Cards view ----------
+function renderCards() {
+  const host = $('#cardsView');
+  host.innerHTML = CONNECTORS.map(c => {
+    const rows = c.rows.map(r => {
+      const main = `
+        <div class="inv-row" tabindex="0" role="button">
+          <span class="lbl">
+            <span class="t">${r.type}</span>
+            <span class="inv-fresh">${CLOCK}${r.fresh} ago</span>
+          </span>
+          <span class="cnt"><span class="n${r.note ? ' has-note' : ''}">${fmt(r.count)}${r.note ? '*' : ''}</span>${CHEVRON}</span>
+          <span class="pillcell">${pillHTML(r)}</span>
+        </div>`;
+      const sub = r.sub ? `
+        <div class="inv-row sub" tabindex="0" role="button">
+          <span class="lbl">
+            <span class="t">${r.sub.label}</span>
+            <span class="inv-fresh">${CLOCK}${r.fresh} ago</span>
+          </span>
+          <span class="cnt">${fmt(r.sub.count)}${CHEVRON}</span>
+          <span class="pillcell"></span>
+        </div>` : '';
+      return main + sub;
+    }).join('');
+
+    return `
+      <div class="neo-card inv-card">
+        <div class="inv-card__head">
+          <img src="../img/Sys/${c.icon}" alt="">
+          <span class="nm">${c.name}</span>
+          ${c.tag ? `<span class="tag">${c.tag}</span>` : ''}
+          <span class="spacer"></span>
+          <span class="total"><span class="n">${fmt(total(c))}</span><span class="u">devices</span></span>
+        </div>
+        <div class="inv-card__cols"><span></span><span class="c">Count</span><span class="c">Data completeness</span></div>
+        <div class="inv-card__body">${rows}</div>
+      </div>`;
+  }).join('');
+}
+
+// ---------- Matrix view ----------
+function renderMatrix() {
+  $('#matrixHead').innerHTML =
+    '<th>Connectors</th><th>Total devices</th>' +
+    TYPE_COLUMNS.map(t => `<th>${t}</th>`).join('');
+
+  $('#matrixBody').innerHTML = CONNECTORS.map(c => {
+    const cells = TYPE_COLUMNS.map(t => {
+      const r = c.rows.find(r => r.type === t);
+      if (!r) return '<td></td>';
+      const sub = r.sub ? `
+        <span class="inv-cell__sub">
+          <span>${r.sub.label}</span><span class="v">${fmt(r.sub.count)}</span>
+        </span>` : '';
+      return `
+        <td tabindex="0" role="button">
+          <span class="inv-cell">
+            <span class="n${r.note ? ' has-note' : ''}">${fmt(r.count)}${r.note ? '*' : ''}</span>
+            <span class="dc-k">Data completeness:</span>
+            <span class="meta">${pillHTML(r)}<span class="inv-fresh"><span class="sep">&middot;</span>${r.fresh}</span></span>
+            ${sub}
+          </span>
+        </td>`;
+    }).join('');
+
+    return `
+      <tr>
+        <td class="connector"><span class="conn"><img src="../img/Sys/${c.icon}" alt="">${c.name}</span></td>
+        <td class="totaldev">${fmt(total(c))}</td>
+        ${cells}
+      </tr>`;
+  }).join('');
+}
+
+// ---------- Matrix crosshair: highlight row title + column header of the hovered cell ----------
+function clearCrosshair() {
+  document.querySelectorAll('.inv-matrix .is-hl').forEach(el => el.classList.remove('is-hl'));
+}
+function applyCrosshair(e) {
+  clearCrosshair();
+  const td = e.target.closest('#matrixBody td');
+  if (!td) return;
+  const idx = [...td.parentElement.children].indexOf(td);
+  td.parentElement.children[0].classList.add('is-hl');
+  td.parentElement.children[1].classList.add('is-hl');
+  $('#matrixHead').children[idx].classList.add('is-hl');
+}
+document.querySelector('.inv-matrix').addEventListener('mouseover', applyCrosshair);
+document.querySelector('.inv-matrix').addEventListener('focusin', applyCrosshair);
+document.querySelector('.inv-matrix').addEventListener('mouseleave', clearCrosshair);
+document.querySelector('.inv-matrix').addEventListener('focusout', clearCrosshair);
+
+// ---------- Footnote balloon: hover/focus a "*" value to see what it rolls up ----------
+// Fixed-position, positioned from the hovered value's own rect so it tracks
+// scrolling and never gets clipped by the table wrapper's rounded corners.
+const balloonEl = $('#dataBalloon');
+const balloonTitleEl = $('#dataBalloonTitle');
+const balloonListEl = $('#dataBalloonList');
+
+function showBalloon(target, note) {
+  balloonTitleEl.textContent = note.title;
+  balloonListEl.innerHTML = note.items.map(i =>
+    `<li>${i.on ? CHECK_ON : CHECK_OFF}<span>${i.label}</span></li>`).join('');
+  balloonEl.classList.add('is-open');
+
+  // Anchor to the right of the value, vertically centered on it; flip to
+  // the left side only if it would run off the right edge of the viewport.
+  const r = target.getBoundingClientRect();
+  const b = balloonEl.getBoundingClientRect();
+  let left = r.right + 10;
+  if (left + b.width > window.innerWidth - 8) left = r.left - b.width - 10;
+  left = Math.max(8, left);
+  let top = r.top + r.height / 2 - b.height / 2;
+  top = Math.max(8, Math.min(top, window.innerHeight - b.height - 8));
+  balloonEl.style.left = `${left}px`;
+  balloonEl.style.top = `${top}px`;
+}
+function hideBalloon() { balloonEl.classList.remove('is-open'); }
+
+// Shared across both views: matrix cells and card rows are both
+// `[role="button"]` containers, so one set of listeners covers either.
+const contentRegionEl = $('#contentRegion');
+contentRegionEl.addEventListener('mouseover', e => {
+  const el = e.target.closest('.has-note');
+  if (el) showBalloon(el, STATUS_FOOTNOTE);
+});
+contentRegionEl.addEventListener('mouseout', e => {
+  const el = e.target.closest('.has-note');
+  if (el && !el.contains(e.relatedTarget)) hideBalloon();
+});
+contentRegionEl.addEventListener('focusin', e => {
+  const note = e.target.closest('[role="button"]')?.querySelector('.has-note');
+  if (note) showBalloon(note, STATUS_FOOTNOTE);
+});
+contentRegionEl.addEventListener('focusout', e => {
+  const note = e.target.closest('[role="button"]')?.querySelector('.has-note');
+  if (note) hideBalloon();
+});
+contentRegionEl.addEventListener('scroll', hideBalloon);
+
+// ---------- Primary click: the whole cell fires the count's action ----------
+// Single-digit counts are a tiny mouse target, so the entire cell is the
+// button: clicking anywhere in it is the same as clicking the first-row count.
+// Only the utilization sub-row and the score pill override it — they are their
+// own smaller actions inside the cell (checked most-specific first below).
+function navigate(kind, connector, deviceType, value) {
+  // Playground stub — swap for real routing when the detail pages exist.
+  console.info(`[navigate] ${kind}: ${connector} › ${deviceType} (${value})`);
+  }
+
+document.querySelector('.inv-matrix').addEventListener('click', e => {
+  const td = e.target.closest('#matrixBody td[role="button"]');
+  if (!td) return;
+  const connector = td.parentElement.querySelector('.conn').textContent.trim();
+  const colIdx = [...td.parentElement.children].indexOf(td);
+  const deviceType = $('#matrixHead').children[colIdx].textContent;
+  // Click feedback so the prototype shows the action landing on the full cell.
+  if (window.gsap) gsap.fromTo(td,
+    { backgroundColor: 'rgba(98, 113, 235, 0.16)' },
+    { backgroundColor: 'rgba(98, 113, 235, 0)', duration: 0.45, ease: 'power1.out', clearProps: 'backgroundColor' });
+
+  const pill = e.target.closest('.inv-pill[data-score]');
+  if (pill) return navigate('completeness detail', connector, deviceType, pill.dataset.score + '%');
+  const sub = e.target.closest('.inv-cell__sub');
+  if (sub) return navigate('utilization detail', connector, deviceType, sub.querySelector('.v').textContent);
+  navigate('device list', connector, deviceType, td.querySelector('.inv-cell > .n').textContent.replace(/\*$/, ''));
+});
+
+// Enter/Space on a focused cell = the same primary click.
+document.querySelector('.inv-matrix').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const td = e.target.closest('#matrixBody td[role="button"]');
+  if (td) { e.preventDefault(); td.click(); }
+});
+
+// ---------- View switching (GSAP crossfade + stagger, CSS fallback) ----------
+const state = { view: 'cards' };
+const cardsEl = $('#cardsView');
+const matrixEl = $('#matrixView');
+
+function stagteredTargets() {
+  return state.view === 'cards' ? cardsEl.children : $('#matrixBody').children;
+}
+
+function animateIn() {
+  if (!window.gsap) return;
+  gsap.fromTo(stagteredTargets(),
+    { y: 14, opacity: 0 },
+    { y: 0, opacity: 1, duration: 0.35, stagger: 0.05, ease: 'power2.out', clearProps: 'transform,opacity' });
+}
+
+function switchView(next) {
+  if (next === state.view) return;
+  const cur = next === 'cards' ? matrixEl : cardsEl;
+  const nxt = next === 'cards' ? cardsEl : matrixEl;
+  state.view = next;
+  document.querySelectorAll('#viewSwitch button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === next));
+
+  const reveal = () => { cur.classList.add('neo-hidden'); nxt.classList.remove('neo-hidden'); animateIn(); };
+  if (window.gsap) {
+    gsap.to(cur, { opacity: 0, duration: 0.15, ease: 'power1.in', onComplete() {
+      gsap.set(cur, { clearProps: 'opacity' });
+      reveal();
+    }});
+  } else {
+    reveal();
+  }
+}
+
+document.querySelectorAll('#viewSwitch button').forEach(b =>
+  b.addEventListener('click', () => switchView(b.dataset.view)));
+
+// ---------- Data freshness toggle ----------
+$('#freshToggle').addEventListener('change', e => {
+  const region = $('#contentRegion');
+  const show = e.target.checked;
+  if (window.gsap && !show) {
+    gsap.to('.inv-fresh', { opacity: 0, duration: 0.15, onComplete() {
+      region.classList.add('fresh-off');
+      gsap.set('.inv-fresh', { clearProps: 'opacity' });
+    }});
+  } else {
+    region.classList.toggle('fresh-off', !show);
+    if (show && window.gsap) gsap.fromTo('.inv-fresh', { opacity: 0 }, { opacity: 1, duration: 0.25 });
+  }
+});
+
+// ---------- Refresh (simulated pull, then re-stagger the active view) ----------
+$('#refreshBtn').addEventListener('click', () => {
+  const btn = $('#refreshBtn');
+  if (btn.classList.contains('busy')) return;
+  btn.classList.add('busy');
+  setTimeout(() => { btn.classList.remove('busy'); animateIn(); }, 750);
+});
+
+// ---------- Inert affordances ----------
+document.querySelectorAll('.inv-tab:not(.active)').forEach(t =>
+  t.addEventListener('click', () => t.blur()));
+
+// ---------- Boot ----------
+renderCards();
+renderMatrix();
+// Deep link: open pre-switched to a view, e.g. assets-inventory.html#matrix
+if (location.hash === '#matrix') switchView('matrix');
+else animateIn();
+</script>
+</body>
+</html>
