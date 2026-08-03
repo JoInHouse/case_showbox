@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discovery Agent — Live mode — DevAI NEO</title>
+  <!--
+    DevAI NEO — Discovery Agent, Live-mode asset table.
+    Source tabs (Overview / per-connector) → profile switch → realtime/cached
+    toggle → info banner → Assets/Trends/Data-completeness sub-tabs → KPI card
+    → filter toolbar → asset table → pagination.
+
+    Scroll handling follows /Guide/asset-table-scroll-plan.md: everything above
+    the table is a fixed "chrome" block (flex-shrink:0) outside the scroller,
+    pagination is pinned below it, and `.dam-tablewrap` is the *only* scrolling
+    region on the page — one scroller, always, per the guide's target in §2.
+    The table also freezes `Server name` (left) and `Action` (right), the
+    higher-value fix called out in the guide's §5: the action a user needs is
+    never more than one glance away, whatever column count grows into later.
+  -->
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    /* ============================================================
+       Page-scoped styles — only for patterns not already in
+       components.css. Tokens only, no new hex/px off the grid.
+       ============================================================ */
+    /* The page itself never scrolls — the rail and main panel manage
+       their own internal scrolling, per the single-scroller contract. */
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--neo-app-bg); }
+    .neo-app { padding-top: var(--space-3); }
+
+    /* ---------- Left rail (same shell as assets-inventory / discrepancy-comparison) ---------- */
+    .dam-rail {
+      padding: var(--space-3) var(--space-2); gap: var(--space-1); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+      align-self: start;
+    }
+    .dam-rail__brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2) var(--space-3); }
+    .dam-rail__brand .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .dam-rail__brand .txt .t { font-weight: 700; font-size: var(--text-sm); color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .dam-rail__brand .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); }
+    .dam-rail__collapse { margin-left: auto; width: 20px; height: 20px; display: grid; place-items: center; cursor: pointer; color: var(--neo-fg-3); border-radius: var(--radius-sm); }
+    .dam-rail__collapse:hover { background: var(--neo-bg-2); }
+    .dam-newchat {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1);
+      cursor: pointer; margin-bottom: var(--space-1);
+    }
+    .dam-newchat:hover { background: var(--neo-bg-2); }
+    .dam-rail__section { font-size: var(--text-xs); color: var(--neo-fg-4); font-weight: 600; padding: var(--space-3) var(--space-2) var(--space-1); letter-spacing: .02em; }
+    .dam-newchat + .dam-rail__scroll > .dam-rail__section:first-child { padding-top: 0; }
+    .dam-rail__scroll { overflow-y: auto; flex: 1; min-height: 0; margin-right: calc(var(--space-1) * -1); padding-right: var(--space-1); }
+    .dam-rail__scroll .neo-sidebar__item { height: 28px; padding: 0 10px; margin: 0; }
+    .neo-sidebar__item .ic { flex: 0 0 16px; width: 16px; height: 16px; display: grid; place-items: center; color: currentColor; }
+    .neo-sidebar__item .ic img, .neo-sidebar__item .ic svg { display: block; }
+    .neo-sidebar__item.active .ic { color: #fff; }
+    .dam-rail__foot { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-2) var(--space-1); border-top: 1px solid var(--neo-indigo-100); margin-top: var(--space-2); }
+    .dam-rail__foot .av { width: 32px; height: 32px; border-radius: var(--radius-pill); flex-shrink: 0; background: var(--neo-indigo); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: var(--text-xs); }
+    .dam-rail__foot .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .dam-rail__foot .txt .t { font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1); line-height: var(--lh-tight); }
+    .dam-rail__foot .txt .s { font-size: var(--text-xs); color: var(--neo-fg-3); line-height: var(--lh-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dam-rail__foot .gear { margin-left: auto; color: var(--neo-fg-3); cursor: pointer; display: grid; place-items: center; }
+
+    /* ---------- Main panel — the single-scroller shell ----------
+       Everything above the table (source tabs, profile row, banner, sub-tabs,
+       KPI card, filter bar) sits in .dam-panel__fixed and never moves.
+       .dam-tablewrap is the one scrolling region; .dam-pagination is pinned
+       below it. That's exactly one scroller, matching every breakpoint. */
+    .neo-main {
+      display: flex; flex-direction: column; gap: var(--space-4); overflow: hidden;
+      height: calc(100vh - var(--space-6));
+      position: sticky; top: var(--space-3);
+    }
+    .dam-panel__fixed { display: flex; flex-direction: column; gap: var(--space-4); flex-shrink: 0; }
+
+    /* ---------- Source tabs ---------- */
+    .dam-sourcetabs { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+    .dam-sourcetab {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      height: 26px; padding: 0 var(--space-2); border-radius: var(--radius-sm);
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-2);
+      background: transparent; border: none; cursor: pointer;
+    }
+    .dam-sourcetab:hover { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .dam-sourcetab.active { background: var(--neo-link); color: #fff; }
+    .dam-sourcetab img, .dam-sourcetab svg { flex-shrink: 0; }
+    .dam-sourcetabs__div { width: 1px; height: 18px; background: var(--neo-border); margin: 0 var(--space-1); }
+
+    /* ---------- Profile / freshness / instance row ---------- */
+    .dam-controlrow { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+    .dam-profile { display: flex; align-items: center; gap: var(--space-2); }
+    .dam-profile__label { font-size: var(--text-sm); color: var(--neo-fg-2); }
+    .dam-pillgroup {
+      display: inline-flex; align-items: center; gap: 2px;
+      padding: 2px; background: var(--neo-bg); border-radius: var(--radius-sm);
+    }
+    .dam-pill {
+      display: inline-flex; align-items: center; height: 26px; padding: 0 var(--space-2);
+      border: none; border-radius: var(--radius-xs);
+      background: transparent; font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-2);
+      cursor: pointer; white-space: nowrap;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .dam-pill:hover { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .dam-pill.active { background: var(--neo-indigo); color: #fff; box-shadow: var(--shadow-1); }
+    .dam-pill:focus-visible { outline: 2px solid var(--neo-link); outline-offset: 2px; }
+    .dam-controlrow__spacer { flex: 1; }
+    .dam-viewinfo { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--neo-fg-2); }
+    .dam-viewinfo img { opacity: .7; }
+    #freshnessSwitch { border: 1px solid var(--neo-indigo-100); padding: 3px; }
+    #freshnessSwitch button { padding: 4px 10px; font-size: var(--text-sm); }
+    #freshnessSwitch .live-ic { color: var(--neo-fg-3); transition: color 150ms ease; }
+    #freshnessSwitch button.active .live-ic { color: #fff; }
+    .dam-instance {
+      position: relative; display: inline-flex; align-items: center; gap: var(--space-2);
+      height: 28px; padding: 0 var(--space-2) 0 var(--space-3);
+      border: 1px solid var(--neo-indigo-hair); border-radius: var(--radius-sm);
+      background: var(--neo-indigo-50); font-size: var(--text-sm); color: var(--neo-fg-1); cursor: pointer;
+    }
+    .dam-instance:hover { background: var(--neo-indigo-100); }
+
+    /* ---------- Info banner ---------- */
+    .dam-banner {
+      position: relative; display: flex; align-items: center; gap: var(--space-2);
+      height: 30px; padding: 0 var(--space-3);
+      background: var(--neo-indigo-light-100); border-radius: var(--radius-sm);
+      font-size: var(--text-sm); color: var(--neo-fg-1);
+      transition: background-color 200ms ease;
+    }
+    .dam-banner::before {
+      content: ''; position: absolute; top: -5px; left: 55%; transform: translateX(-50%) rotate(45deg);
+      width: 9px; height: 9px; background: inherit; border-radius: 2px 0 0 0;
+    }
+    .dam-banner svg { color: var(--neo-indigo); flex-shrink: 0; }
+    .dam-banner__icon { display: inline-flex; flex-shrink: 0; }
+    .dam-banner__text { flex: 0 1 auto; }
+    .dam-banner__meta { color: var(--neo-fg-3); flex-shrink: 0; }
+    .dam-banner__link { flex-shrink: 0; color: var(--neo-link); font-size: var(--text-sm); font-weight: 600; background: none; border: none; padding: 0; cursor: pointer; }
+    .dam-banner__link:hover { text-decoration: underline; }
+    @keyframes dam-spin { to { transform: rotate(360deg); } }
+    .dam-spinner { color: var(--neo-indigo); animation: dam-spin 0.85s linear infinite; transform-origin: center; }
+    .dam-banner__icon .chk-bg { fill: var(--neo-success-2); }
+    .dam-banner.success { background: #E9FDF3; }
+
+    /* ---------- Sub-tabs (Assets / Trends / Data completeness) ---------- */
+    .dam-subtabs { display: flex; align-items: center; gap: var(--space-5); border-bottom: 1px solid var(--neo-border); }
+    .dam-subtab {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      padding: var(--space-2) 0; margin-bottom: -1px;
+      font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-3);
+      background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+    }
+    .dam-subtab:hover { color: var(--neo-fg-1); }
+    .dam-subtab.active { color: var(--neo-fg-1); border-bottom-color: var(--neo-indigo); }
+
+    /* ---------- KPI card ---------- */
+    .dam-kpi { padding: var(--space-4) var(--space-5); }
+    .dam-kpi__head { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--neo-fg-1); margin-bottom: var(--space-2); }
+    .dam-kpi__icon { display: inline-flex; flex-shrink: 0; color: var(--neo-fg-2); }
+    .dam-kpi__icon img, .dam-kpi__icon svg { display: block; }
+    .dam-kpi__num { font-size: var(--text-4xl); font-weight: 700; color: var(--neo-fg-1); line-height: var(--lh-tight); letter-spacing: -0.02em; }
+
+    /* ---------- Table toolbar (filters + column/export/page controls) ---------- */
+    .dam-tablebar { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+    .dam-tablebar__total { display: flex; align-items: baseline; gap: var(--space-1); font-size: var(--text-sm); color: var(--neo-fg-2); }
+    .dam-tablebar__total b { color: var(--neo-fg-1); font-weight: 700; }
+    .dam-statusgroup { display: flex; align-items: center; gap: var(--space-2); }
+    .dam-statusgroup__label { font-size: var(--text-sm); color: var(--neo-fg-2); }
+    .dam-statuspill {
+      display: inline-flex; align-items: center; height: 28px; padding: 0 var(--space-3);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .dam-statuspill:hover { background: var(--neo-bg-2); }
+    .dam-statuspill.active { background: var(--neo-indigo-50); border-color: var(--neo-indigo-hair); color: var(--neo-link); }
+    .dam-statusmore {
+      position: relative; display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 28px; padding: 0 var(--space-2);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-sm); font-weight: 700; color: var(--neo-fg-2);
+      cursor: pointer;
+    }
+    .dam-statusmore:hover { background: var(--neo-bg-2); }
+    .dam-statusmore.has-active { border-color: var(--neo-indigo-hair); color: var(--neo-link); background: var(--neo-indigo-50); }
+    .dam-linkbtn { border: none; background: transparent; color: var(--neo-link); font-size: var(--text-sm); cursor: pointer; padding: 2px 4px; }
+    .dam-linkbtn:hover { text-decoration: underline; }
+    .dam-tablebar__spacer { flex: 1; }
+    .dam-ghostbtn {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      height: 32px; padding: 0 var(--space-3);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: var(--text-sm); color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .dam-ghostbtn:hover { background: var(--neo-bg-2); }
+    .dam-ghostbtn svg, .dam-ghostbtn img { color: var(--neo-fg-2); }
+
+    /* Dropdown popovers (instance / status-more / columns / page-size) */
+    .dam-pop {
+      position: absolute; z-index: 40; top: calc(100% + var(--space-1)); left: 0;
+      min-width: 190px; background: var(--neo-surface);
+      border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-3); padding: var(--space-2);
+    }
+    .dam-pop.right { left: auto; right: 0; }
+    .dam-pop__item {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-2); border-radius: var(--radius-sm);
+      font-size: var(--text-sm); color: var(--neo-fg-1); cursor: pointer; white-space: nowrap;
+    }
+    .dam-pop__item:hover { background: var(--neo-bg-2); }
+    .dam-pop__item input { accent-color: var(--neo-indigo); }
+    .dam-pop__item.is-selected { color: var(--neo-link); font-weight: 600; }
+
+    /* ---------- Table: the one part that actually scrolls (both axes) ----------
+       overflow:auto on this single box keeps the whole page to one scroller;
+       sticky <th> pins the header, sticky first/last <td>/<th> freeze
+       Server name and Action so the row action is always reachable. */
+    .dam-tablewrap {
+      border: 1px solid var(--neo-indigo-100); border-radius: var(--radius-md);
+      overflow: auto; flex: 1; min-height: 0;
+    }
+    /* border-collapse:collapse silently breaks position:sticky on <th>/<td> in every
+       major browser — separate + zero spacing keeps the same look and lets it stick. */
+    .dam-table { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; font-size: var(--text-xs); }
+    .dam-table th {
+      position: sticky; top: 0; z-index: 6;
+      background: var(--neo-indigo-50); color: var(--neo-fg-1); font-weight: 600;
+      text-align: left; padding: var(--space-2) var(--space-3);
+      border-bottom: 1px solid var(--neo-indigo-100); white-space: nowrap;
+    }
+    .dam-table th.sortable { cursor: pointer; user-select: none; }
+    .dam-table th.sortable:hover { color: var(--neo-link); }
+    .dam-table th .sort-ind { margin-left: var(--space-1); color: var(--neo-fg-4); font-size: 10px; }
+    .dam-table th.sorted .sort-ind { color: var(--neo-indigo); }
+    .dam-table td {
+      padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--neo-border);
+      color: var(--neo-fg-1); vertical-align: middle; white-space: nowrap; background: var(--neo-surface);
+    }
+    .dam-table tbody tr:hover td { background: var(--neo-bg-2); }
+    .dam-table td.mono { font-family: var(--font-sans); }
+
+    /* Frozen columns: Server name (left) and Action (right). Explicit opaque
+       background on every state (base + hover) so scrolled content never
+       shows through the sticky cell. */
+    .dam-table th.frozen-left, .dam-table td.frozen-left { position: sticky; left: 0; z-index: 3; }
+    .dam-table th.frozen-right, .dam-table td.frozen-right { position: sticky; right: 0; z-index: 3; }
+    .dam-table th.frozen-left, .dam-table th.frozen-right { z-index: 7; }
+    .dam-table td.frozen-left { font-weight: 700; }
+    .dam-table tbody tr:hover td.frozen-left,
+    .dam-table tbody tr:hover td.frozen-right { background: var(--neo-bg-3); }
+    /* Shadow seam only appears once there's something to hide behind the frozen
+       column — toggled by JS on actual horizontal scroll, not shown at rest. */
+    .dam-tablewrap.scrolled-x td.frozen-left, .dam-tablewrap.scrolled-x th.frozen-left { box-shadow: 2px 0 4px rgba(6, 0, 26, 0.08); }
+    .dam-tablewrap.not-at-end td.frozen-right, .dam-tablewrap.not-at-end th.frozen-right { box-shadow: -2px 0 4px rgba(6, 0, 26, 0.08); }
+
+    .dam-statusdot { display: inline-flex; align-items: center; gap: var(--space-1); }
+    .dam-statusdot i { width: 6px; height: 6px; border-radius: var(--radius-pill); display: inline-block; }
+    .dam-statusdot.installed i { background: var(--neo-success-2); }
+    .dam-statusdot.onorder i { background: var(--neo-warning); }
+    .dam-statusdot.maint i { background: var(--neo-warning); }
+    .dam-statusdot.retired i, .dam-statusdot.decommissioned i { background: var(--neo-fg-4); }
+    .dam-statusdot.pending i { background: var(--neo-link); }
+
+    .dam-viewbtn {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      height: 24px; padding: 0 var(--space-3);
+      border: 1px solid var(--neo-fg-5); border-radius: var(--radius-sm);
+      background: var(--neo-surface); font-size: 11px; font-weight: 600; color: var(--neo-fg-1);
+      cursor: pointer;
+    }
+    .dam-viewbtn:hover { background: var(--neo-indigo-50); border-color: var(--neo-indigo-hair); color: var(--neo-link); }
+
+    .dam-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--space-3); padding: var(--space-12) var(--space-4); text-align: center; color: var(--neo-fg-3);
+    }
+    .dam-empty .t { font-size: var(--text-sm); font-weight: 600; color: var(--neo-fg-2); }
+    .dam-empty .s { font-size: var(--text-xs); }
+
+    /* ---------- Pagination — pinned below the scrolling table ---------- */
+    .dam-pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-shrink: 0; }
+    .dam-pagination__status { font-size: var(--text-xs); color: var(--neo-fg-3); }
+    .dam-pagination__pages { display: flex; align-items: center; gap: var(--space-1); }
+    .dam-pagination .pbtn {
+      min-width: 28px; height: 28px; padding: 0 var(--space-2);
+      border: 1px solid var(--neo-border); border-radius: var(--radius-sm);
+      background: var(--neo-surface); color: var(--neo-fg-2); font-size: var(--text-xs);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1);
+    }
+    .dam-pagination .pbtn:hover:not(:disabled) { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .dam-pagination .pbtn.active { background: var(--neo-indigo); border-color: var(--neo-indigo); color: #fff; font-weight: 700; }
+    .dam-pagination .pbtn:disabled { opacity: .45; cursor: default; }
+    .dam-pagination .pell { color: var(--neo-fg-4); padding: 0 var(--space-1); }
+    .dam-pagination .pnav { padding: 0 var(--space-3); }
+
+    /* ---------- Detail drawer (Action → View detail) ---------- */
+    .dam-scrim { position: fixed; inset: 0; background: rgba(6, 0, 26, 0.28); opacity: 0; pointer-events: none; transition: opacity 200ms ease; z-index: 90; }
+    .dam-scrim.open { opacity: 1; pointer-events: auto; }
+    .dam-drawer {
+      position: fixed; top: 0; right: 0; height: 100vh; width: 380px; max-width: 92vw;
+      background: var(--neo-surface); box-shadow: var(--shadow-3);
+      transform: translateX(100%); transition: transform 200ms ease;
+      z-index: 100; display: flex; flex-direction: column;
+    }
+    .dam-drawer.open { transform: translateX(0); }
+    .dam-drawer__head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--neo-border); }
+    .dam-drawer__head .t { font-size: var(--text-md); font-weight: 700; color: var(--neo-fg-1); font-family: var(--font-mono); }
+    .dam-drawer__close { margin-left: auto; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--neo-fg-3); cursor: pointer; border: none; background: transparent; }
+    .dam-drawer__close:hover { background: var(--neo-bg-2); color: var(--neo-fg-1); }
+    .dam-drawer__body { flex: 1; overflow-y: auto; padding: var(--space-4) var(--space-5); }
+    .dam-drow { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--neo-border); font-size: var(--text-xs); }
+    .dam-drow .k { color: var(--neo-fg-3); }
+    .dam-drow .v { color: var(--neo-fg-1); font-weight: 600; }
+
+    @media (max-width: 1100px) {
+      .dam-table { min-width: 780px; }
+    }
+  </style>
+</head>
+<body>
+<div class="neo-app">
+  <div class="neo-body">
+
+    <!-- ============ Left rail (Discovery Agent context) ============ -->
+    <aside class="neo-sidebar dam-rail">
+      <div class="dam-rail__brand">
+        <span class="neo-topbar__avatar" style="width:40px;height:40px;border-radius:var(--radius-lg);">
+          <img src="../img/NEO_Avatar.png" alt="">
+        </span>
+        <span class="txt">
+          <span class="t">DevAI NEO</span>
+          <span class="s">Network Intelligence Engine</span>
+        </span>
+        <span class="dam-rail__collapse" title="Collapse rail" aria-label="Collapse rail">
+          <img src="../img/Objects/LeftSidePanel.svg" width="14" height="14" alt="">
+        </span>
+      </div>
+
+      <div class="dam-newchat">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        New chat
+      </div>
+
+      <div class="dam-rail__scroll">
+        <div class="dam-rail__section">Agents</div>
+        <div class="neo-sidebar__item active" data-nav="discovery"><span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="4.2" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M10.2 10.2L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M7 5.2v3.6M5.2 7h3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+          </svg>
+        </span><span>Discovery Agent</span></div>
+        <div class="neo-sidebar__item" data-nav="discrepancy"><span class="ic">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M3 8h10M3 11h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span><span>Discrepancy Agent</span></div>
+        <div class="neo-sidebar__item" data-nav="location"><span class="ic">
+          <img src="../img/Objects/Location.svg" width="16" height="16" alt="">
+        </span><span>Location View</span></div>
+
+        <div class="dam-rail__section">Insights</div>
+        <div class="neo-sidebar__item" data-nav="i1"><span class="ic">
+          <img src="../img/Objects/IncidentCheck.svg" width="16" height="16" alt="">
+        </span><span>Incident insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i2"><span class="ic">
+          <img src="../img/Objects/IP_Device.svg" width="16" height="16" alt="">
+        </span><span>IP &amp; device insights</span></div>
+        <div class="neo-sidebar__item" data-nav="i3"><span class="ic">
+          <img src="../img/Objects/Server.svg" width="16" height="16" alt="">
+        </span><span>Server &amp; application</span></div>
+        <div class="neo-sidebar__item" data-nav="i4"><span class="ic"><img src="../img/Sys/Jira_Outline.svg" width="16" height="16" alt=""></span><span>Jira Issue</span></div>
+        <div class="neo-sidebar__item" data-nav="i5"><span class="ic"><img src="../img/Sys/Zabbix_14x14_outline.svg" width="16" height="16" alt=""></span><span>Zabbix problems</span></div>
+        <div class="neo-sidebar__item" data-nav="i6"><span class="ic">
+          <img src="../img/Objects/IPAddressPlanning.svg" width="16" height="16" alt="">
+        </span><span>IP Planning</span></div>
+
+        <div class="dam-rail__section">Working Topics</div>
+        <div class="neo-sidebar__item" data-nav="t1"><span>General knowledge</span></div>
+        <div class="neo-sidebar__item" data-nav="t2"><span>Outage incident</span></div>
+        <div class="neo-sidebar__item" data-nav="t3"><span>Planning &amp; architecture</span></div>
+        <div class="neo-sidebar__item" data-nav="t4"><span>Compliance review</span></div>
+
+        <div class="dam-rail__section">Recent Chats</div>
+        <div class="neo-sidebar__item" data-nav="c1"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>IP address' inquiry of 10.11.128.3</span></div>
+        <div class="neo-sidebar__item" data-nav="c2"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Device check on Location JFK08</span></div>
+        <div class="neo-sidebar__item" data-nav="c3"><span class="ic">
+          <img src="../img/Objects/Histroy-clock.svg" width="14" height="14" alt="">
+        </span><span>Workflow review on discrepancies</span></div>
+      </div>
+
+      <div class="dam-rail__foot">
+        <span class="av">JZ</span>
+        <span class="txt">
+          <span class="t">Josephzou</span>
+          <span class="s">josephzou@dev_ai.com</span>
+        </span>
+        <span class="gear" title="Settings"><img src="../img/Controls/Settings.svg" width="16" height="16" alt="Settings"></span>
+      </div>
+    </aside>
+
+    <!-- ============ Main panel ============ -->
+    <main class="neo-main">
+      <div class="dam-panel__fixed">
+
+        <!-- Source tabs: Overview + per-connector -->
+        <div class="dam-sourcetabs" id="sourceTabs"></div>
+
+        <!-- Profile switch + freshness + selected instance -->
+        <div class="dam-controlrow">
+          <div class="dam-profile">
+            <span class="dam-profile__label">Profile:</span>
+            <span class="dam-pillgroup" id="profilePills"></span>
+          </div>
+          <span class="dam-controlrow__spacer"></span>
+          <span class="dam-viewinfo">Data for this view <img src="../img/Objects/Info.svg" width="12" height="12" alt=""> :</span>
+          <div class="neo-toolbar__switch" id="freshnessSwitch">
+            <button data-fresh="cached">Cached &middot; 2d</button>
+            <button class="active" data-fresh="live">
+              <svg class="live-ic" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M6.99992 8.99596C8.10337 8.99596 8.9979 8.10143 8.9979 6.99798C8.9979 5.89453 8.10337 5 6.99992 5C5.89647 5 5.00195 5.89453 5.00195 6.99798C5.00195 8.10143 5.89647 8.99596 6.99992 8.99596Z" fill="currentColor"/>
+                <path d="M10 5C10.3403 5.58835 10.5351 6.27143 10.5351 7C10.5351 7.72857 10.3403 8.41165 10 9" stroke="currentColor" stroke-linecap="round"/>
+                <path d="M4.03516 5C3.69482 5.58835 3.50003 6.27143 3.50003 7C3.50003 7.72857 3.69482 8.41165 4.03516 9" stroke="currentColor" stroke-linecap="round"/>
+                <path d="M2 4C1.364 4.88252 1 5.90714 1 7C1 8.09286 1.364 9.11748 2 10" stroke="currentColor" stroke-linecap="round"/>
+                <path d="M12 4C12.636 4.88252 13 5.90714 13 7C13 8.09286 12.636 9.11748 12 10" stroke="currentColor" stroke-linecap="round"/>
+              </svg>
+              Realtime
+            </button>
+          </div>
+          <div style="position:relative;">
+            <button class="dam-instance" id="instanceBtn">
+              <span id="instanceLabel">Selected Instance: Zabbix Instance2</span>
+              <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+            </button>
+            <div class="dam-pop right neo-hidden" id="instancePop"></div>
+          </div>
+        </div>
+
+        <!-- Info banner -->
+        <div class="dam-banner" id="banner">
+          <span class="dam-banner__icon" id="bannerIcon"></span>
+          <span class="dam-banner__text" id="bannerText">Realtime data straight from each instance separately. Analysis and insights may take a while to catch up.</span>
+          <span class="dam-banner__meta" id="bannerMeta">&middot; Just Now</span>
+          <button class="dam-banner__link" id="bannerRefresh">Refresh again</button>
+        </div>
+
+        <!-- Assets / Trends / Data completeness -->
+        <div class="dam-subtabs" id="subTabs">
+          <button class="dam-subtab active" data-tab="assets">Assets</button>
+          <button class="dam-subtab" data-tab="trends">Trends</button>
+          <button class="dam-subtab" data-tab="completeness">Data Completeness</button>
+        </div>
+
+        <!-- KPI card -->
+        <div class="neo-card dam-kpi">
+          <div class="dam-kpi__head">
+            <span class="dam-kpi__icon" id="kpiIcon"><img src="../img/Sys/Zabbix_16x16_Disc.svg" width="16" height="16" alt=""></span>
+            <span id="kpiLabel">Total server count &mdash; Zabbix Instance2:</span>
+          </div>
+          <div class="dam-kpi__num" id="kpiNum">343</div>
+        </div>
+
+        <!-- Table toolbar: install-status filter + column/export/page controls -->
+        <div class="dam-tablebar">
+          <span class="dam-tablebar__total"><span id="totalLabel">Total servers:</span> <b id="totalNum">343</b></span>
+          <div class="dam-statusgroup">
+            <span class="dam-statusgroup__label">Install status:</span>
+            <span id="statusPills"></span>
+            <div style="position:relative;">
+              <button class="dam-statusmore" id="statusMoreBtn">4</button>
+              <div class="dam-pop neo-hidden" id="statusMorePop"></div>
+            </div>
+            <button class="dam-linkbtn" id="statusClearBtn">Clear</button>
+          </div>
+          <span class="dam-tablebar__spacer"></span>
+          <div style="position:relative;">
+            <button class="dam-ghostbtn" id="columnsBtn">
+              <img src="../img/Objects/ColManagement.svg" width="14" height="14" alt="">
+              Manage columns
+            </button>
+            <div class="dam-pop right neo-hidden" id="columnsPop"></div>
+          </div>
+          <button class="dam-ghostbtn" id="exportBtn">
+            <img src="../img/Controls/Download-file.svg" width="14" height="14" alt="">
+            Export
+          </button>
+          <div style="position:relative;">
+            <button class="dam-ghostbtn" id="pageSizeBtn">
+              <span id="pageSizeLabel">25/page</span>
+              <img src="../img/Controls/Arrow-down.svg" width="12" height="12" alt="">
+            </button>
+            <div class="dam-pop right neo-hidden" id="pageSizePop"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: the one part that actually scrolls; header + frozen columns stick -->
+      <div class="dam-tablewrap" id="tableWrap">
+        <table class="dam-table" id="assetTable">
+          <thead><tr id="headRow"></tr></thead>
+          <tbody id="bodyRows"></tbody>
+        </table>
+        <div class="dam-empty neo-hidden" id="emptyState">
+          <div class="t">No assets match the current filters</div>
+          <div class="s">Clear the install-status filter to widen the results.</div>
+        </div>
+      </div>
+
+      <!-- Pagination stays pinned below the scrolling table, always visible -->
+      <div class="dam-pagination">
+        <span class="dam-pagination__status" id="pageStatus"></span>
+        <span class="dam-pagination__pages" id="pagination"></span>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Detail drawer: opened from the frozen Action column -->
+<div class="dam-scrim" id="scrim"></div>
+<aside class="dam-drawer" id="drawer" aria-hidden="true">
+  <div class="dam-drawer__head">
+    <span class="t" id="drawerTitle">host</span>
+    <button class="dam-drawer__close" id="drawerClose" aria-label="Close detail">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="dam-drawer__body" id="drawerBody"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/* ============================================================
+   Discovery Agent — Live mode asset table. Client-side mock
+   data only; swap MOCK_ROWS for a real fetch() later.
+   ============================================================ */
+
+// ---------- Icons (kept inline so the JS file is the single source for markup) ----------
+const ICON_OVERVIEW = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8.1" y="1.5" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1.5" y="8.1" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8.1" y="8.1" width="4.4" height="4.4" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>';
+const FRESHNESS_ICONS = {
+  info: '<img src="../img/Objects/Info.svg" width="16" height="16" alt="">',
+  spinner: `<svg class="dam-spinner" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-dasharray="27 12"/></svg>`,
+  check: `<svg width="16" height="16" viewBox="0 0 14 14" fill="none"><circle class="chk-bg" cx="7" cy="7" r="7"/><path d="M4 7.2L6.1 9.3L10 4.9" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+};
+
+// ---------- Sources (source tabs). Each has a total multiplier applied to the
+// active profile's base total, so switching source feels alive without a
+// second full dataset to hand-author. ----------
+const SOURCES = [
+  { key: 'overview',    label: 'Overview',          icon: ICON_OVERVIEW,                                factor: 2.4, hasInstance: false },
+  { key: 'servicenow',  label: 'ServiceNow',        icon: '<img src="../img/Sys/SN_16x16_Disc.svg" alt="">', factor: 1.0, hasInstance: false },
+  { key: 'netbox',      label: 'Netbox',            icon: '<img src="../img/Sys/Netbox_16x16_Disc.svg" alt="">', factor: 0.55, hasInstance: false },
+  { key: 'intersight',  label: 'Cisco Intersight',  icon: '<img src="../img/Sys/CiscoIntersight_16x16_Disc.svg" alt="">', factor: 0.3, hasInstance: false },
+  { key: 'zabbix',      label: 'Zabbix',            icon: '<img src="../img/Sys/Zabbix_16x16_Disc.svg" alt="">', factor: 1.0, hasInstance: true, instances: ['Zabbix Instance1', 'Zabbix Instance2'] }
+];
+
+// ---------- Profiles (Profile: pill group). Each regenerates the table with
+// its own naming pattern, per the guide's technical note on the seed shape. ----------
+const PROFILES = [
+  { key: 'servers', label: 'Servers',          prefix: 'dfw01', roles: ['arubamobility', 'sdwan', 'switch', 'wireless', 'dist', 'edge', 'leaf', 'spine'], baseTotal: 343, digits: 2 },
+  { key: 'network',  label: 'Network devices', prefix: 'dfw01', roles: ['core', 'agg', 'tor', 'fw', 'lb', 'spine'], baseTotal: 187, digits: 2 },
+  { key: 'vm',       label: 'Virtual machines', prefix: 'vm',   roles: ['app', 'db', 'web', 'cache', 'batch', 'queue'], baseTotal: 512, digits: 3 }
+];
+
+const STATUSES = [
+  { key: 'installed',     label: 'Installed',      weight: 0.70 },
+  { key: 'onorder',       label: 'On order',        weight: 0.08 },
+  { key: 'maint',         label: 'In maintenance',  weight: 0.06 },
+  { key: 'retired',       label: 'Retired',         weight: 0.06 },
+  { key: 'pending',       label: 'Pending install', weight: 0.05 },
+  { key: 'decommissioned', label: 'Decommissioned', weight: 0.05 }
+];
+const PRIMARY_STATUS_KEYS = ['installed', 'onorder']; // shown as top-level pills; the rest live in the "+N more" popover
+
+const COLUMNS = [
+  { key: 'name',   label: 'Server name',   visible: true, locked: true,  sortable: true,  type: 'text', frozen: 'left' },
+  { key: 'status', label: 'Device status', visible: true, locked: false, sortable: true,  type: 'text' },
+  { key: 'cores',  label: 'CPU cores',     visible: true, locked: false, sortable: true,  type: 'num' },
+  { key: 'ram',    label: 'RAM (GB)',      visible: true, locked: false, sortable: true,  type: 'num' },
+  { key: 'f1',     label: 'Field - 01',    visible: true, locked: false, sortable: false, type: 'text' },
+  { key: 'f2',     label: 'Field - 02',    visible: true, locked: false, sortable: false, type: 'text' },
+  { key: 'f3',     label: 'Field - 03',    visible: true, locked: false, sortable: false, type: 'text' },
+  { key: 'f4',     label: 'Field - 04',    visible: true, locked: false, sortable: false, type: 'text' },
+  { key: '_action', label: 'Action',       visible: true, locked: true,  sortable: false, type: 'action', frozen: 'right' }
+];
+
+// Deterministic pseudo-random so the dataset is stable across reloads.
+let _seed = 20260803;
+function rnd() { _seed = (_seed * 1103515245 + 12345) & 0x7fffffff; return _seed / 0x7fffffff; }
+function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+function pickWeighted(items) {
+  const r = rnd();
+  let acc = 0;
+  for (const it of items) { acc += it.weight; if (r <= acc) return it; }
+  return items[items.length - 1];
+}
+function fieldVal() { return 'VH-' + (1000 + Math.floor(rnd() * 9000)); }
+
+function buildRows(profile, total) {
+  const roleCounters = {};
+  const rows = [];
+  for (let i = 0; i < total; i++) {
+    const role = pick(profile.roles);
+    roleCounters[role] = (roleCounters[role] || 0) + 1;
+    const name = `${profile.prefix}-${role}-${String(roleCounters[role]).padStart(profile.digits, '0')}`;
+    const status = pickWeighted(STATUSES);
+    rows.push({
+      id: i,
+      name,
+      statusKey: status.key,
+      statusLabel: status.label,
+      cores: pick([4, 8, 8, 8, 16, 32]),
+      ram: pick([8, 16, 32, 64]),
+      f1: fieldVal(), f2: fieldVal(), f3: fieldVal(), f4: fieldVal()
+    });
+  }
+  return rows;
+}
+
+// ---------- State ----------
+const state = {
+  source: 'zabbix',
+  instance: 'Zabbix Instance2',
+  profile: 'servers',
+  freshness: 'live',
+  statusFilter: new Set(['installed']),
+  search: '',
+  sortKey: null,
+  sortDir: 1,
+  page: 1,
+  pageSize: 25
+};
+
+let MOCK_ROWS = [];
+function regenerateRows() {
+  const profile = PROFILES.find(p => p.key === state.profile);
+  const source = SOURCES.find(s => s.key === state.source);
+  const total = Math.max(1, Math.round(profile.baseTotal * source.factor));
+  MOCK_ROWS = buildRows(profile, total);
+}
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+
+function filteredRows() {
+  let rows = MOCK_ROWS;
+  if (state.statusFilter.size > 0) rows = rows.filter(r => state.statusFilter.has(r.statusKey));
+  return rows;
+}
+function sortedRows(rows) {
+  if (!state.sortKey) return rows;
+  const col = COLUMNS.find(c => c.key === state.sortKey);
+  const copy = [...rows];
+  copy.sort((a, b) => {
+    const av = a[state.sortKey], bv = b[state.sortKey];
+    if (col.type === 'num') return (av - bv) * state.sortDir;
+    return String(av).localeCompare(String(bv)) * state.sortDir;
+  });
+  return copy;
+}
+
+// ---------- Render: source tabs ----------
+function renderSourceTabs() {
+  const host = $('#sourceTabs');
+  host.innerHTML = SOURCES.map((s, i) => {
+    const div = i === 1 ? '<span class="dam-sourcetabs__div"></span>' : '';
+    return `${div}<button class="dam-sourcetab${s.key === state.source ? ' active' : ''}" data-source="${s.key}">${s.icon}${s.label}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-source]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      state.source = btn.dataset.source;
+      const src = SOURCES.find(s => s.key === state.source);
+      if (src.hasInstance) state.instance = src.instances[src.instances.length - 1];
+      state.page = 1;
+      fullRender();
+    }));
+}
+
+// ---------- Render: profile pills ----------
+function renderProfilePills() {
+  const host = $('#profilePills');
+  host.innerHTML = PROFILES.map(p =>
+    `<button class="dam-pill${p.key === state.profile ? ' active' : ''}" data-profile="${p.key}">${p.label}</button>`
+  ).join('');
+  host.querySelectorAll('[data-profile]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      state.profile = btn.dataset.profile;
+      state.page = 1; state.sortKey = null;
+      fullRender();
+    }));
+}
+
+// ---------- Render: instance selector ----------
+function renderInstanceSelector() {
+  const src = SOURCES.find(s => s.key === state.source);
+  const wrap = $('#instanceBtn').parentElement;
+  wrap.style.display = src.hasInstance ? '' : 'none';
+  if (!src.hasInstance) return;
+  $('#instanceLabel').textContent = `Selected Instance: ${state.instance}`;
+  const pop = $('#instancePop');
+  pop.innerHTML = src.instances.map(inst =>
+    `<div class="dam-pop__item${inst === state.instance ? ' is-selected' : ''}" data-inst="${inst}">${inst}</div>`
+  ).join('');
+  pop.querySelectorAll('[data-inst]').forEach(it =>
+    it.addEventListener('click', () => { state.instance = it.dataset.inst; closePops(); fullRender(); }));
+}
+
+// ---------- Render: KPI + total ----------
+function renderTotals() {
+  const profile = PROFILES.find(p => p.key === state.profile);
+  const src = SOURCES.find(s => s.key === state.source);
+  const label = src.hasInstance ? state.instance : src.label;
+  const total = MOCK_ROWS.length;
+  $('#kpiIcon').innerHTML = src.icon;
+  $('#kpiLabel').innerHTML = `Total ${profile.label.toLowerCase()} count &mdash; ${label}:`;
+  $('#kpiNum').textContent = total.toLocaleString('en-US');
+  $('#totalLabel').textContent = `Total ${profile.label.toLowerCase()}:`;
+  $('#totalNum').textContent = total.toLocaleString('en-US');
+}
+
+// ---------- Render: install-status pills ----------
+function renderStatusPills() {
+  const host = $('#statusPills');
+  host.innerHTML = PRIMARY_STATUS_KEYS.map(key => {
+    const s = STATUSES.find(s => s.key === key);
+    return `<button class="dam-statuspill${state.statusFilter.has(key) ? ' active' : ''}" data-status="${key}" style="margin-right:6px;">${s.label}</button>`;
+  }).join('');
+  host.querySelectorAll('[data-status]').forEach(btn =>
+    btn.addEventListener('click', () => { toggleStatus(btn.dataset.status); }));
+
+  const moreKeys = STATUSES.map(s => s.key).filter(k => !PRIMARY_STATUS_KEYS.includes(k));
+  const moreActive = moreKeys.some(k => state.statusFilter.has(k));
+  $('#statusMoreBtn').classList.toggle('has-active', moreActive);
+  $('#statusMoreBtn').textContent = String(moreKeys.length);
+}
+function toggleStatus(key) {
+  if (state.statusFilter.has(key)) state.statusFilter.delete(key);
+  else state.statusFilter.add(key);
+  state.page = 1;
+  renderTable();
+  renderStatusPills();
+  paintStatusMorePop();
+}
+function paintStatusMorePop() {
+  const pop = $('#statusMorePop');
+  const moreKeys = STATUSES.map(s => s.key).filter(k => !PRIMARY_STATUS_KEYS.includes(k));
+  pop.innerHTML = moreKeys.map(key => {
+    const s = STATUSES.find(s => s.key === key);
+    return `<label class="dam-pop__item"><input type="checkbox" data-opt="${key}" ${state.statusFilter.has(key) ? 'checked' : ''}><span>${s.label}</span></label>`;
+  }).join('');
+  pop.querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('change', () => toggleStatus(inp.dataset.opt)));
+}
+
+// ---------- Render: table head ----------
+function renderHead() {
+  const row = $('#headRow');
+  row.innerHTML = '';
+  COLUMNS.filter(c => c.visible).forEach(col => {
+    const th = document.createElement('th');
+    th.className = (col.frozen ? `frozen-${col.frozen} ` : '') + (col.sortable ? 'sortable' + (state.sortKey === col.key ? ' sorted' : '') : '');
+    if (col.sortable) {
+      const ind = state.sortKey === col.key ? (state.sortDir === 1 ? '▲' : '▼') : '↕';
+      th.innerHTML = `${col.label}<span class="sort-ind">${ind}</span>`;
+      th.addEventListener('click', () => {
+        if (state.sortKey === col.key) state.sortDir *= -1;
+        else { state.sortKey = col.key; state.sortDir = 1; }
+        renderTable();
+      });
+    } else {
+      th.textContent = col.label;
+    }
+    row.appendChild(th);
+  });
+}
+
+// ---------- Render: table body ----------
+function renderBody(pageRows) {
+  const body = $('#bodyRows');
+  body.innerHTML = '';
+  const visCols = COLUMNS.filter(c => c.visible);
+  pageRows.forEach(r => {
+    const tr = document.createElement('tr');
+    visCols.forEach(col => {
+      const td = document.createElement('td');
+      if (col.frozen) td.className = `frozen-${col.frozen}`;
+      if (col.key === 'name') { td.textContent = r.name; }
+      else if (col.key === 'status') {
+        td.innerHTML = `<span class="dam-statusdot ${r.statusKey}"><i></i>${r.statusLabel}</span>`;
+      } else if (col.key === '_action') {
+        const btn = document.createElement('button');
+        btn.className = 'dam-viewbtn';
+        btn.textContent = 'View detail';
+        btn.addEventListener('click', () => openDrawer(r));
+        td.appendChild(btn);
+      } else {
+        td.textContent = r[col.key];
+        if (col.type === 'num') td.className += (td.className ? ' ' : '') + 'mono';
+      }
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+// ---------- Render: pagination ----------
+function renderPagination(total) {
+  const pages = Math.max(1, Math.ceil(total / state.pageSize));
+  if (state.page > pages) state.page = pages;
+  const el = $('#pagination');
+  el.innerHTML = '';
+
+  const start = total === 0 ? 0 : (state.page - 1) * state.pageSize + 1;
+  const end = Math.min(total, state.page * state.pageSize);
+  $('#pageStatus').textContent = total === 0 ? 'No results' : `Showing ${start}–${end} of ${total.toLocaleString('en-US')}`;
+  if (total === 0) return;
+
+  const mkBtn = (label, page, opts = {}) => {
+    const b = document.createElement('button');
+    b.className = 'pbtn' + (opts.active ? ' active' : '') + (opts.nav ? ' pnav' : '');
+    b.innerHTML = label;
+    if (opts.disabled) b.disabled = true;
+    else b.addEventListener('click', () => { state.page = page; renderTable(); });
+    return b;
+  };
+  const mkEll = () => { const s = document.createElement('span'); s.className = 'pell'; s.textContent = '…'; return s; };
+
+  el.appendChild(mkBtn('<img src="../img/Controls/ArrowwithTail.svg" width="14" height="14" style="transform:scaleX(-1);vertical-align:-2px;" alt="">Previous', state.page - 1, { nav: true, disabled: state.page === 1 }));
+
+  const nums = new Set([1, 2, pages - 1, pages, state.page - 1, state.page, state.page + 1]);
+  const shown = [...nums].filter(n => n >= 1 && n <= pages).sort((a, b) => a - b);
+  let prev = 0;
+  shown.forEach(n => {
+    if (n - prev > 1) el.appendChild(mkEll());
+    el.appendChild(mkBtn(String(n), n, { active: n === state.page }));
+    prev = n;
+  });
+
+  el.appendChild(mkBtn('Next<img src="../img/Controls/ArrowwithTail.svg" width="14" height="14" style="vertical-align:-2px;" alt="">', state.page + 1, { nav: true, disabled: state.page === pages }));
+}
+
+// ---------- Render: table (rows + pagination only — cheaper than a full re-render) ----------
+function renderTable() {
+  renderHead();
+  const rows = sortedRows(filteredRows());
+  const total = rows.length;
+  const start = (state.page - 1) * state.pageSize;
+  const pageRows = rows.slice(start, start + state.pageSize);
+
+  const empty = $('#emptyState');
+  const table = $('#assetTable');
+  if (total === 0) { empty.classList.remove('neo-hidden'); table.classList.add('neo-hidden'); }
+  else { empty.classList.add('neo-hidden'); table.classList.remove('neo-hidden'); renderBody(pageRows); }
+
+  renderPagination(total);
+  updateScrollShadows();
+}
+
+// ---------- Master render (data-affecting changes go through here) ----------
+function fullRender() {
+  regenerateRows();
+  renderSourceTabs();
+  renderProfilePills();
+  renderInstanceSelector();
+  renderTotals();
+  renderStatusPills();
+  paintStatusMorePop();
+  renderTable();
+}
+
+// ---------- Frozen-column scroll shadows ----------
+function updateScrollShadows() {
+  const wrap = $('#tableWrap');
+  wrap.classList.toggle('scrolled-x', wrap.scrollLeft > 2);
+  wrap.classList.toggle('not-at-end', wrap.scrollLeft < wrap.scrollWidth - wrap.clientWidth - 2);
+}
+let scrollTicking = false;
+$('#tableWrap').addEventListener('scroll', () => {
+  if (scrollTicking) return;
+  scrollTicking = true;
+  requestAnimationFrame(() => { updateScrollShadows(); scrollTicking = false; });
+});
+
+// ---------- Popover plumbing ----------
+let openPop = null;
+function closePops() { if (openPop) { openPop.classList.add('neo-hidden'); openPop = null; } }
+function togglePop(pop) {
+  if (openPop === pop) { closePops(); return; }
+  closePops();
+  pop.classList.remove('neo-hidden');
+  openPop = pop;
+}
+document.addEventListener('click', e => {
+  if (openPop && !openPop.contains(e.target) && !e.target.closest('[data-pop-trigger]')) closePops();
+});
+
+$('#instanceBtn').setAttribute('data-pop-trigger', '');
+$('#instanceBtn').addEventListener('click', e => { e.stopPropagation(); togglePop($('#instancePop')); });
+
+$('#statusMoreBtn').setAttribute('data-pop-trigger', '');
+$('#statusMoreBtn').addEventListener('click', e => { e.stopPropagation(); togglePop($('#statusMorePop')); });
+
+$('#statusClearBtn').addEventListener('click', () => {
+  state.statusFilter.clear();
+  state.page = 1;
+  renderStatusPills(); paintStatusMorePop(); renderTable();
+});
+
+// Manage columns popover
+(() => {
+  const btn = $('#columnsBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#columnsPop');
+  function paint() {
+    pop.innerHTML = COLUMNS.filter(c => !c.locked).map(c =>
+      `<label class="dam-pop__item"><input type="checkbox" data-col="${c.key}" ${c.visible ? 'checked' : ''}>${c.label}</label>`
+    ).join('');
+    pop.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => {
+      const col = COLUMNS.find(c => c.key === inp.dataset.col);
+      col.visible = inp.checked;
+      if (state.sortKey === col.key && !col.visible) state.sortKey = null;
+      renderTable();
+    }));
+  }
+  btn.addEventListener('click', e => { e.stopPropagation(); paint(); togglePop(pop); });
+})();
+
+// Page size popover
+(() => {
+  const btn = $('#pageSizeBtn'); btn.setAttribute('data-pop-trigger', '');
+  const pop = $('#pageSizePop');
+  [10, 25, 50, 100].forEach(n => {
+    const it = document.createElement('div');
+    it.className = 'dam-pop__item';
+    it.textContent = `${n}/page`;
+    it.addEventListener('click', () => {
+      state.pageSize = n; state.page = 1;
+      $('#pageSizeLabel').textContent = `${n}/page`;
+      closePops(); renderTable();
+    });
+    pop.appendChild(it);
+  });
+  btn.addEventListener('click', e => { e.stopPropagation(); togglePop(pop); });
+})();
+
+// ---------- Export (stub — swap for a real download later) ----------
+$('#exportBtn').addEventListener('click', () => {
+  const rows = sortedRows(filteredRows());
+  console.info(`[export] ${rows.length} rows as CSV (stub) — profile: ${state.profile}, source: ${state.source}`);
+  const btn = $('#exportBtn');
+  if (window.gsap) gsap.fromTo(btn, { backgroundColor: 'rgba(98,113,235,0.16)' }, { backgroundColor: 'rgba(98,113,235,0)', duration: 0.5, clearProps: 'backgroundColor' });
+});
+
+// ---------- Sub-tabs (only Assets has content in this prototype) ----------
+$$('.dam-subtab').forEach(t => t.addEventListener('click', () => {
+  $$('.dam-subtab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  t.blur();
+}));
+
+// ---------- Freshness toggle + simulated live refresh ----------
+const LIVE_REFRESH_MS = 5000;
+let liveRefreshTimer = null;
+function formatRefreshStamp(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function setBanner({ icon, text, meta, linkVisible, success }) {
+  $('#bannerIcon').innerHTML = FRESHNESS_ICONS[icon];
+  $('#bannerText').textContent = text;
+  $('#bannerMeta').textContent = meta || '';
+  $('#bannerRefresh').classList.toggle('neo-hidden', !linkVisible);
+  $('#banner').classList.toggle('success', !!success);
+}
+function startLiveRefresh() {
+  clearTimeout(liveRefreshTimer);
+  setBanner({ icon: 'spinner', text: 'Realtime data straight from each instance separately. Now refreshing…', meta: '', linkVisible: false, success: false });
+  liveRefreshTimer = setTimeout(() => {
+    setBanner({ icon: 'check', text: `Refresh completed at ${formatRefreshStamp(new Date())}.`, meta: '', linkVisible: true, success: true });
+  }, LIVE_REFRESH_MS);
+}
+function stopLiveRefresh() {
+  clearTimeout(liveRefreshTimer);
+  liveRefreshTimer = null;
+  setBanner({ icon: 'info', text: 'Full analysis and insights are ready instantly, from the last synced pull.', meta: '&middot; 2d ago', linkVisible: false, success: false });
+}
+$$('#freshnessSwitch button').forEach(b => b.addEventListener('click', () => {
+  $$('#freshnessSwitch button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  state.freshness = b.dataset.fresh;
+  if (state.freshness === 'live') startLiveRefresh(); else stopLiveRefresh();
+}));
+$('#bannerRefresh').addEventListener('click', () => {
+  if (state.freshness === 'live') startLiveRefresh();
+});
+
+// ---------- Detail drawer ----------
+function openDrawer(r) {
+  $('#drawerTitle').textContent = r.name;
+  const visCols = COLUMNS.filter(c => c.visible && c.key !== 'name' && c.key !== '_action');
+  $('#drawerBody').innerHTML = visCols.map(col => {
+    const val = col.key === 'status' ? r.statusLabel : r[col.key];
+    return `<div class="dam-drow"><span class="k">${col.label}</span><span class="v">${val}</span></div>`;
+  }).join('');
+  $('#scrim').classList.add('open');
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+}
+function closeDrawer() {
+  $('#scrim').classList.remove('open');
+  $('#drawer').classList.remove('open');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+}
+$('#drawerClose').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closePops(); } });
+
+// ---------- Sidebar nav (show active only; single-page prototype) ----------
+$$('.neo-sidebar__item').forEach(item => item.addEventListener('click', () => {
+  $$('.neo-sidebar__item').forEach(i => i.classList.remove('active'));
+  item.classList.add('active');
+}));
+
+// ---------- Boot ----------
+fullRender();
+startLiveRefresh();
+</script>
+</body>
+</html>
