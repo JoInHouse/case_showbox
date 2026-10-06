@@ -207,8 +207,8 @@
       pointer-events: none;           /* the empty band never blocks the page */
     }
     .site-header__inner > * { pointer-events: auto; }
-    .site-header__logo { display: block; color: #dedede; transition: color var(--dur-header) ease; }
-    .site-header__logo svg { width: 78.34px; height: 26.75px; }
+    .site-header__logo { display: block; }
+    .site-header__logo img { width: 78.34px; height: 26.75px; transition: filter var(--dur-header) ease; }
 
     .site-nav ul {
       display: flex; align-items: center; gap: 40px;
@@ -538,7 +538,9 @@
     /* Phones: the tall hero scrolls under the header, so give it a dark band there too. */
     .site-header.is-scrolled:not(.is-on-light)::before { opacity: 1; background: rgba(4, 8, 34, 0.9); }
     .site-header__inner { position: relative; }
-    .site-header.is-on-light .site-header__logo { color: var(--color-bg-hero); }
+    /* The logo file is light-on-dark; on the light sheet, invert its lightness while
+       hue-rotate keeps the teal dots teal (#DEDEDE letters become #212121). */
+    .site-header.is-on-light .site-header__logo img { filter: invert(1) hue-rotate(180deg); }
     .site-header.is-on-light .site-nav ul,
     .site-header.is-on-light .site-header__toggle {
       background-color: rgba(4, 8, 34, 0.06); border-color: rgba(4, 8, 34, 0.14);
@@ -577,18 +579,8 @@
 <body>
   <header class="site-header" id="site-header">
     <div class="site-header__inner">
-      <a class="site-header__logo" href="#" aria-label="DevAI home">
-        <svg aria-hidden="true" focusable="false" width="79" height="27" viewBox="0 0 79 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M35.1093 2.51426C35.9775 2.1525 36.9746 2.56307 37.3364 3.4313L44.2796 20.0951L51.2229 3.4313C51.5846 2.56307 52.5817 2.1525 53.45 2.51426C54.3182 2.87602 54.7288 3.87312 54.367 4.74134L45.8517 25.1781C45.5872 25.8127 44.9671 26.2261 44.2796 26.2261C43.5921 26.2261 42.972 25.8127 42.7076 25.1781L34.1922 4.74134C33.8305 3.87312 34.2411 2.87602 35.1093 2.51426Z" fill="currentColor"/>
-<circle cx="2.55459" cy="13.6249" r="2.55459" fill="#32C7A9"/>
-<circle cx="75.7863" cy="2.55459" r="2.55459" fill="#32C7A9"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M60.3559 2.48483C61.2398 2.16313 62.2171 2.61885 62.5388 3.5027L69.9945 23.9873C70.3162 24.8711 69.8605 25.8484 68.9767 26.1701C68.0928 26.4918 67.1155 26.0361 66.7938 25.1522L59.3381 4.66766C59.0164 3.78381 59.4721 2.80652 60.3559 2.48483Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M75.7862 6.64062C76.7268 6.64062 77.4893 7.40311 77.4893 8.34369L77.4893 24.6931C77.4893 25.6337 76.7268 26.3962 75.7862 26.3962C74.8456 26.3962 74.0831 25.6337 74.0831 24.6931L74.0831 8.34369C74.0831 7.40311 74.8456 6.64062 75.7862 6.64062Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M62.332 18.2227C62.332 19.1633 61.5695 19.9258 60.629 19.9258L57.2228 19.9258C56.2823 19.9258 55.5198 19.1633 55.5198 18.2227C55.5198 17.2821 56.2823 16.5197 57.2228 16.5197L60.629 16.5197C61.5695 16.5197 62.332 17.2821 62.332 18.2227Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M30.9958 13.793C30.9958 14.7336 30.2334 15.4961 29.2928 15.4961L25.8867 15.4961C24.9461 15.4961 24.1836 14.7336 24.1836 13.793C24.1836 12.8525 24.9461 12.09 25.8867 12.09L29.2928 12.09C30.2334 12.09 30.9958 12.8525 30.9958 13.793Z" fill="currentColor"/>
-<path d="M11.2401 13.7964C11.2401 9.09356 7.42767 5.28113 2.72479 5.28113C1.78421 5.28113 1.02173 4.51864 1.02173 3.57806C1.02173 2.63749 1.78421 1.875 2.72479 1.875C9.30882 1.875 14.6462 7.21241 14.6462 13.7964C14.6462 20.3805 9.30882 25.7179 2.72479 25.7179C1.78421 25.7179 1.02173 24.9554 1.02173 24.0148C1.02173 23.0742 1.78421 22.3118 2.72479 22.3118C7.42767 22.3118 11.2401 18.4993 11.2401 13.7964Z" fill="currentColor"/>
-<path d="M29.2928 1.875C22.7088 1.875 17.3713 7.21241 17.3713 13.7964C17.3713 20.3805 22.7087 25.7179 29.2928 25.7179C30.2334 25.7179 30.9958 24.9554 30.9958 24.0148C30.9958 23.0742 30.2334 22.3118 29.2928 22.3118C24.5899 22.3118 20.7775 18.4993 20.7775 13.7964C20.7775 9.09356 24.5899 5.28113 29.2928 5.28113C30.2334 5.28113 30.9958 4.51864 30.9958 3.57806C30.9958 2.63749 30.2334 1.875 29.2928 1.875Z" fill="currentColor"/>
-</svg>
+      <a class="site-header__logo" href="#">
+        <img src="../img/devai-logo.svg" width="79" height="27" alt="DevAI home">
       </a>
       <button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="site-nav">
         <span class="site-header__bars" aria-hidden="true"></span>

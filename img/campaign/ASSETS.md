@@ -5,7 +5,7 @@ Page: `pages/devai-campaign.html`. All paths below are relative to the repo root
 
 | Figma layer (node) | Used for | File on disk | Status |
 | --- | --- | --- | --- |
-| `Group 1` (9796:4994) | Header logo | `img/devai-logo.svg` (inlined into the page so the grey strokes can flip to dark via `currentColor` on light backgrounds) | ✅ |
+| `Group 1` (9796:4994) | Header logo | `img/devai-logo.svg` (referenced via `<img>`; on the light header a CSS `invert(1) hue-rotate(180deg)` filter darkens the grey letters and keeps the teal dots) | ✅ |
 | `Group 48096468` (9940:4203) | Hero background rings | `img/campaign/FocusArea_bg.svg` | ✅ |
 | `Icon/Dark/Server` (10045:4530) | Hero summary line icon | `img/campaign/Server.svg` | ✅ |
 | `warning-triangle--frame-alert-…` (10050:4572 ×4) | Alert chip icon | `img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg` | ✅ |
