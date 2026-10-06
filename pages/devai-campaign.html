@@ -144,6 +144,7 @@
     button, input { font: inherit; color: inherit; }
     button { background: none; border: 0; cursor: pointer; }
     ul { list-style: none; }
+    [hidden] { display: none !important; }
 
     .visually-hidden {
       position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
@@ -245,6 +246,142 @@
       color: var(--color-text-hero-heading); text-align: center;
     }
 
+
+    /* ============================================================
+       Content sheet
+       ============================================================ */
+    .content__inner { display: flex; flex-direction: column; gap: 80px; padding-block: 60px; }
+
+    .display {
+      font-size: var(--text-display); font-weight: 500; line-height: 1.25;
+      color: var(--color-text-heading); letter-spacing: -0.005em;
+    }
+    .display--tight { line-height: var(--lh-display); }
+    .lead { font-size: var(--text-lead); line-height: var(--lh-lead); color: var(--color-text-body); }
+    .gradient-text {
+      background-image: var(--gradient-heading);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+
+    .intro { display: flex; flex-direction: column; gap: 20px; }
+    .intro > .display { line-height: 1.42; }   /* Figma text box: 91px at 64px */
+
+    /* How-it-works card */
+    .how-card {
+      display: flex; gap: 40px; align-items: flex-start; padding: 20px;
+      border-radius: var(--radius-card);
+      background: var(--gradient-how-card) center / 100% 100% no-repeat;
+    }
+    .how-card__steps { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+    .how-card__title { font-size: var(--text-h3); font-weight: 600; line-height: 40px; }
+    .how-card__title .gradient-text { display: inline-block; max-width: 100%; }
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+    .steps__item { display: flex; gap: 4px; align-items: flex-start; }
+    .steps__item img { flex: none; width: 24px; height: 24px; }
+    .steps__item p, .how-card__cost { font-size: var(--text-body); line-height: 20px; color: var(--color-text-body); }
+    .steps__item strong, .steps__item span { display: block; }
+    .steps__item strong, .how-card__cost strong { font-weight: 700; }
+
+    /* Sign-up card */
+    .signup {
+      flex: none; width: var(--form-w);
+      background: var(--color-surface-form);
+      border: 1px solid var(--color-border-light); border-radius: var(--radius-card);
+      padding: 20px; scroll-margin-top: 120px;
+    }
+    .signup__form { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .signup__title {
+      align-self: stretch; display: flex; align-items: center; min-height: 28px;
+      font-size: var(--text-sm); font-weight: 600; color: var(--color-text-form);
+    }
+    .signup__fields { align-self: stretch; display: flex; flex-direction: column; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: var(--text-form); line-height: 18px; color: var(--color-text-form); }
+    .field__req { color: var(--color-text-required); }
+    .field input {
+      height: 34px; padding: 4px 8px; width: 100%;
+      font-size: var(--text-form); color: var(--color-text-form);
+      background: var(--color-surface-input);
+      border: 1px solid var(--color-border-light); border-radius: var(--radius-search);
+      transition: border-color var(--dur-state) ease, box-shadow var(--dur-state) ease;
+    }
+    .field input::placeholder { color: var(--color-text-placeholder); opacity: 1; }
+    .field input:focus { outline: none; border-color: var(--color-accent-indigo); box-shadow: 0 0 0 3px rgba(98, 113, 235, 0.18); }
+    .field input:user-invalid { border-color: var(--color-text-required); }
+    .signup__success { display: flex; flex-direction: column; gap: 8px; min-height: 120px; justify-content: center; }
+    .signup__success:focus { outline: none; }
+    .signup__success-body { font-size: var(--text-body); line-height: 22px; color: var(--color-text-body); }
+
+    .btn-cta {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 22px; border-radius: var(--radius-cta);
+      background: var(--color-accent-green); color: var(--color-text-on-accent);
+      font-size: var(--text-body); font-weight: 600; line-height: 20px; white-space: nowrap;
+      transition: background-color var(--dur-state) ease, transform var(--dur-state) ease;
+    }
+    .btn-cta:hover { background: var(--color-accent-green-hover); }
+    .btn-cta:active { transform: scale(0.98); }
+    .btn-cta[disabled] { opacity: 0.6; cursor: progress; }
+    .content .btn-cta:focus-visible { outline-color: var(--color-accent-indigo); }
+
+    /* Security banner */
+    .security {
+      display: flex; align-items: center; gap: 20px; padding: 20px;
+      background: var(--color-surface-security); color: var(--color-text-on-dark);
+      border-radius: var(--radius-card);
+    }
+    .security img { flex: none; width: 36px; height: 36px; }
+    .security__lead { font-size: var(--text-body); font-weight: 600; line-height: 23px; }
+    .security__body { font-size: var(--text-sm); line-height: 16px; }
+
+    /* Deliverables */
+    .deliverables { display: flex; flex-direction: column; gap: 40px; }
+    .deliverables__grid {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px;
+      grid-template-rows: minmax(201px, auto); grid-auto-rows: minmax(180px, auto);   /* Figma: first row 201, second 180 */
+    }
+    .deliverable {
+      display: flex; flex-direction: column; gap: 16px; min-height: 180px; padding: 20px;
+      background: var(--color-surface-card); border-radius: var(--radius-card);
+    }
+    .deliverable img { width: 32px; height: 32px; }
+    .deliverable__title { font-size: var(--text-title); font-weight: 600; line-height: 25px; color: var(--color-text-body); }
+    .deliverable__body { font-size: var(--text-sm); line-height: 18px; color: var(--color-text-body); }
+    .deliverables__note { font-size: var(--text-body); font-style: italic; line-height: 20px; color: var(--color-text-body); }
+
+    /* Closing CTA */
+    .closing { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .closing > .display, .closing > .lead { align-self: stretch; }
+
+    /* ============================================================
+       Footer
+       ============================================================ */
+    .site-footer__inner { max-width: var(--page-max); margin-inline: auto; padding-bottom: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .site-footer__rule { height: 1px; border: 0; margin-inline: var(--page-gutter); background: var(--gradient-footer-rule); }
+    .site-footer__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 40px var(--page-gutter); }
+    .site-footer__copy { font-size: var(--text-sm); line-height: 20px; color: var(--color-text-footer); }
+    .site-footer__social { display: block; line-height: 0; border-radius: 4px; }
+
+    @media (max-width: 1099px) {
+      .deliverables__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; gap: 24px; }
+    }
+    @media (max-width: 899px) {
+      .content__inner { gap: 64px; padding-block: 48px; }
+      .how-card { flex-direction: column; gap: 24px; background-size: 100% 100%; }
+      .signup { width: 100%; }
+    }
+    @media (max-width: 639px) {
+      .deliverables__grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+      .display--tight { line-height: 1.15; }
+      .lead { font-size: 18px; line-height: 28px; }
+      .how-card { padding: 16px; }
+      .how-card__title { font-size: 24px; line-height: 32px; }
+      .security { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .signup .btn-cta { align-self: stretch; white-space: normal; text-align: center; }
+      .site-footer__row { padding-block: 32px; }
+    }
+
     @media (max-width: 899px) {
       :root { --header-pad: 16px 20px; --page-gutter: 20px; }
       .site-header__toggle { display: inline-flex; }
@@ -305,13 +442,128 @@
   </section>
 
   <main class="content" id="content">
-    <div class="container" style="min-height: 1600px; padding-top: 60px;">
-      <h2>Get Your IT Data Truth Score</h2>
+    <div class="container content__inner">
+
+      <!-- Intro + how it works + security -->
+      <section class="intro" aria-labelledby="truth-score-title">
+        <h2 class="display" id="truth-score-title">Get Your IT Data Truth Score</h2>
+        <p class="lead">In 3 weeks, we measure how far your sources of truth have drifted apart, using your own data. Every team works from the same facts, so the conversation shifts from finger-pointing to shared trust and collaboration.</p>
+
+        <div class="how-card">
+          <div class="how-card__steps">
+            <h3 class="how-card__title"><span class="gradient-text">How it works: From guesswork to a clear picture</span></h3>
+            <ol class="steps">
+              <li class="steps__item">
+                <img src="../img/campaign/1.svg" width="24" height="24" alt="" loading="lazy">
+                <p><strong>Take a free questionnaire:</strong> <span>Answer several questions in about 5 mins. Get an instant score.</span></p>
+              </li>
+              <li class="steps__item">
+                <img src="../img/campaign/2.svg" width="24" height="24" alt="" loading="lazy">
+                <p><strong>Run the Data Assessment:</strong> <span>We connect read-only to a few of your tools, or files from exports, and compare them using our IT intelligence engine and generate actionable insights for you.</span></p>
+              </li>
+              <li class="steps__item">
+                <img src="../img/campaign/3.svg" width="24" height="24" alt="" loading="lazy">
+                <p><strong>Get your results:</strong> <span>An executive readout with discrepancy findings, insights, impact estimated, and a prioritized fix plan.</span></p>
+              </li>
+            </ol>
+            <p class="how-card__cost"><strong>Cost:</strong> 5,000 USD, refundable after a successful subscription.</p>
+          </div>
+
+          <div class="signup" id="signup">
+            <form class="signup__form" id="signup-form" aria-labelledby="signup-title">
+              <h3 class="signup__title" id="signup-title">Sign up for data assessment!</h3>
+              <div class="signup__fields">
+                <div class="field">
+                  <label for="f-name">Your name <span class="field__req" aria-hidden="true">*</span></label>
+                  <input id="f-name" name="name" type="text" placeholder="Your name" autocomplete="name" required>
+                </div>
+                <div class="field">
+                  <label for="f-email">Work email <span class="field__req" aria-hidden="true">*</span></label>
+                  <input id="f-email" name="email" type="email" placeholder="name@company.com" autocomplete="email" required>
+                </div>
+                <div class="field">
+                  <label for="f-phone">Phone number <span class="field__req" aria-hidden="true">*</span></label>
+                  <input id="f-phone" name="phone" type="tel" placeholder="+1 555 000 0000" autocomplete="tel" required>
+                </div>
+                <div class="field">
+                  <label for="f-role">What’s your role? <span class="field__req" aria-hidden="true">*</span></label>
+                  <input id="f-role" name="role" type="text" placeholder="your job title" autocomplete="organization-title" required>
+                </div>
+              </div>
+              <button class="btn-cta" type="submit">
+                <span class="btn-cta__label">Sign up for the assessment now</span>
+                <span class="asset-ph" data-asset="arrow-right-dark.svg" aria-hidden="true"></span>
+              </button>
+            </form>
+            <div class="signup__success" id="signup-success" role="status" tabindex="-1" hidden>
+              <p class="signup__title">You’re on the list!</p>
+              <p class="signup__success-body">Thanks<span data-success-name></span>. We’ll contact you at <strong data-success-email></strong> to schedule your assessment.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="security" aria-label="Security and data handling">
+          <img src="../img/campaign/shield-lock.svg" width="36" height="36" alt="" loading="lazy">
+          <div>
+            <p class="security__lead">Security and data handling: Read-only. Your data stays yours.</p>
+            <p class="security__body">We never write to your systems during an assessment. Connect through read-only API credentials, or run our system inside your environment, or send us exports. Pick your choice of access. Data is encrypted in transit and at rest, kept only for the engagement, and deleted on request.</p>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Deliverables -->
+      <section class="deliverables" aria-labelledby="deliverables-title">
+        <h2 class="display display--tight gradient-text" id="deliverables-title">What you are going to get?<br>Your actual data, reconciled.</h2>
+        <ul class="deliverables__grid">
+          <li class="deliverable">
+            <img src="../img/campaign/Discrepancy.svg" width="32" height="32" alt="" loading="lazy">
+            <h3 class="deliverable__title">Discrepancy report</h3>
+            <p class="deliverable__body">every asset that's missing, duplicated, stale, or conflicting across sources, with counts by type.</p>
+          </li>
+          <li class="deliverable">
+            <img src="../img/campaign/Waste.svg" width="32" height="32" alt="" loading="lazy">
+            <h3 class="deliverable__title">Waste identified</h3>
+            <p class="deliverable__body">orphaned VMs, idle servers and overcommitted hosts, with an estimate of license and capacity you can reclaim.</p>
+          </li>
+          <li class="deliverable">
+            <img src="../img/campaign/Missing.svg" width="32" height="32" alt="" loading="lazy">
+            <h3 class="deliverable__title">Security blind spots</h3>
+            <p class="deliverable__body">assets outside your vulnerability scope, and the CVEs that apply to them.</p>
+          </li>
+          <li class="deliverable">
+            <img src="../img/campaign/Readiness.svg" width="32" height="32" alt="" loading="lazy">
+            <h3 class="deliverable__title">Operational readiness</h3>
+            <p class="deliverable__body">ownership and dependency gaps that would slow an incident, a patch cycle or a VMware migration</p>
+          </li>
+          <li class="deliverable">
+            <img src="../img/campaign/Roadmap.svg" width="32" height="32" alt="" loading="lazy">
+            <h3 class="deliverable__title">Remediation roadmap</h3>
+            <p class="deliverable__body">prioritized fixes, and the business case for continuous reconciliation.</p>
+          </li>
+        </ul>
+        <p class="deliverables__note">Note: Actual deliverables depend on your subscriptions.</p>
+      </section>
+
+      <!-- Closing CTA -->
+      <section class="closing" aria-labelledby="closing-title">
+        <h2 class="display display--tight gradient-text" id="closing-title">Bridge the gap between data and value</h2>
+        <p class="lead">Twenty minutes on your real inventory, and see it yourself this afternoon. Find out what your fleet actually looks like and let your teams share trust and collaborate now.</p>
+        <a class="btn-cta" href="#signup">Sign up for the assessment now</a>
+      </section>
+
     </div>
   </main>
 
   <footer class="site-footer">
-    <div class="container" style="padding-block: 40px; color: var(--color-text-footer);">Copyright © 2026 DevAI. All rights reserved.</div>
+    <div class="site-footer__inner">
+      <hr class="site-footer__rule">
+      <div class="site-footer__row">
+        <p class="site-footer__copy">Copyright © 2026 DevAI. All rights reserved.</p>
+        <a class="site-footer__social" href="#" aria-label="DevAI on LinkedIn"><!-- TODO(owner): LinkedIn URL -->
+          <span class="asset-ph" data-asset="linkedin.svg" style="--ph-size: 25px" aria-hidden="true"></span>
+        </a>
+      </div>
+    </div>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
@@ -327,6 +579,32 @@
       img.onload = () => { ph.replaceChildren(img); ph.classList.add('asset-ph--loaded'); };
       img.src = `../img/campaign/${ph.dataset.asset}`;
     });
+
+    /* ---------- Sign-up form ----------
+       submitLead is the single integration point; the owner wires the real endpoint later. */
+    async function submitLead(payload) {
+      console.log('[submitLead]', payload);
+      return { ok: true };
+    }
+    (() => {
+      const form = document.getElementById('signup-form');
+      const success = document.getElementById('signup-success');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form));
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        const result = await submitLead(payload);
+        button.disabled = false;
+        if (!result.ok) return;
+        success.querySelector('[data-success-name]').textContent = payload.name ? `, ${payload.name}` : '';
+        success.querySelector('[data-success-email]').textContent = payload.email;
+        form.hidden = true;
+        success.hidden = false;
+        success.focus();
+      });
+    })();
 
     /* ---------- Mobile nav toggle (CSS owns the open/closed state) ---------- */
     (() => {

@@ -131,6 +131,12 @@ export async function openPage({ width = 1440, height = 900, reducedMotion = fal
     async shot(file, { fullPage = false } = {}) {
       const params = { format: 'png' };
       if (fullPage) {
+        // Load lazy images below the fold, then return to the top.
+        await evaluate(`(async () => {
+          document.querySelectorAll('img[loading="lazy"]').forEach((i) => { i.loading = 'eager'; });
+          await Promise.all([...document.images].map((i) => i.complete || new Promise((r) => { i.onload = i.onerror = r; })));
+          return true;
+        })()`);
         const { cssContentSize } = await send('Page.getLayoutMetrics');
         params.captureBeyondViewport = true;
         params.clip = { x: 0, y: 0, width, height: Math.ceil(cssContentSize.height), scale: 1 };
