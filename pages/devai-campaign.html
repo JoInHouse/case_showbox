@@ -180,7 +180,7 @@
        Page regions: stacking contract
        header (fixed, z 30) › content + footer (relative, z 10) › hero (sticky, z 0)
        ============================================================ */
-    .site-header { position: fixed; inset: 0 0 auto; z-index: 30; }
+    .site-header { position: fixed; inset: 0 0 auto; z-index: 30; pointer-events: none; }
     .hero {
       position: sticky; top: var(--hero-stick, 0px); z-index: 0;
       min-height: 100vh; min-height: 100svh;
@@ -190,6 +190,7 @@
       position: relative; z-index: 10;
       background: var(--color-bg-content);
       border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+      box-shadow: var(--shadow-sheet-edge);       /* reads as a sheet lifting over the hero */
     }
     .site-footer { position: relative; z-index: 10; background: var(--color-bg-footer); }
 
@@ -260,6 +261,7 @@
       min-height: 100vh; min-height: 100svh;
       padding: calc(var(--header-h) + clamp(16px, 6.6vh, 60px)) var(--page-gutter) clamp(24px, 6.6vh, 60px);
     }
+    .hero__inner { transform-origin: 50% calc(100% - 50vh); }   /* recede around the visible slice */
     .hero__copy { display: flex; flex-direction: column; align-items: center; gap: var(--hero-gap); }
     .hero__title {
       font-size: var(--text-display); font-weight: 600; line-height: 1.25;
@@ -519,6 +521,29 @@
       .site-footer__row { padding-block: 32px; }
     }
 
+    /* Header on the light sheet (toggled by ScrollTrigger in Phase 6).
+       A frosted band fades in behind it so the logo stays legible over content. */
+    .site-header::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: rgba(255, 255, 255, 0.78);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent);
+      transition: opacity var(--dur-header) ease;
+    }
+    .site-header.is-on-light::before { opacity: 1; }
+    .site-header__inner { position: relative; }
+    .site-header.is-on-light .site-header__logo { color: var(--color-bg-hero); }
+    .site-header.is-on-light .site-nav ul,
+    .site-header.is-on-light .site-header__toggle {
+      background-color: rgba(4, 8, 34, 0.06); border-color: rgba(4, 8, 34, 0.14);
+    }
+    .site-header.is-on-light .site-nav a { color: var(--color-text-body); }
+    .site-header.is-on-light .site-nav a:hover { color: #178a73; }
+    .site-header.is-on-light .site-nav__login { border-color: rgba(4, 8, 34, 0.2); }
+    .site-header.is-on-light .site-header__toggle[aria-expanded="false"] .site-header__bars,
+    .site-header.is-on-light .site-header__bars::before,
+    .site-header.is-on-light .site-header__bars::after { background-color: var(--color-text-body); }
+
     @media (max-width: 899px) {
       :root { --header-pad: 16px 20px; --page-gutter: 20px; }
       .site-header__toggle { display: inline-flex; }
@@ -537,6 +562,9 @@
       }
       .site-nav a { padding: 12px; justify-content: space-between; }
       .site-nav__login { border-left: 0; border-top: 1px solid var(--color-border-nav-divider); padding: 0; margin: 4px 0 0; }
+    }
+    @media (max-width: 899px) {
+      .site-header.is-on-light .site-nav ul { background-color: rgba(255, 255, 255, 0.97); border-color: var(--color-border-light); }
     }
   </style>
 </head>
@@ -818,6 +846,7 @@
 
       let phase = 'idle';                              // idle | playing | ready
       let intro = null;
+      let covered = false;                             // hero fully hidden under the sheet
       const listeners = { ready: [] };
 
       function setPhase(next) {
@@ -903,11 +932,23 @@
         return tl;
       }
 
+      /* Nothing in the hero runs while the sheet fully covers it. */
+      function setCovered(next) {
+        covered = next;
+        if (covered) {
+          if (phase === 'playing') intro?.pause();
+          window.heroInteraction?.pauseIdle();
+        } else {
+          if (phase === 'playing' && !document.hidden) intro?.resume();
+          window.heroInteraction?.resumeIdle();
+        }
+      }
+
       function play() {
         if (!intro || phase !== 'idle') return;
         setPhase('playing');
         intro.play(0);
-        if (document.hidden) intro.pause();
+        if (document.hidden || covered) intro.pause();
       }
 
       function replay() {
@@ -949,9 +990,26 @@
         if (armed) check();
         else window.addEventListener('load', () => requestAnimationFrame(check), { once: true });
 
+        /* Phase 6: as the sheet rises, the hero recedes (scale, fade, lift) and the rings
+           sink for depth. CSS sticky does the pinning; this only adds the depth cue. */
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: content,
+            start: 'top bottom',
+            end: 'top top',
+            scrub: 0.4,
+            onToggle: (self) => { heroInner.style.willChange = self.isActive ? 'transform, opacity' : ''; },
+            onLeave: () => setCovered(true),
+            onEnterBack: () => setCovered(false),
+          },
+        })
+          .to(heroInner, { scale: 0.94, autoAlpha: 0.4, y: -40, ease: 'none' }, 0)
+          .to(heroBg, { y: 60, ease: 'none' }, 0);
+
         return () => {                                 // media change: jump to the final state
           intro?.progress(1).kill();
           intro = null;
+          heroInner.style.willChange = '';
           gsap.set([summary, ...tiles, ...chips, caret, glow, ...mismatches], { clearProps: 'all' });
           root.classList.remove('js-hero-pending');
         };
@@ -959,7 +1017,7 @@
 
       document.addEventListener('visibilitychange', () => {
         if (!intro || phase !== 'playing') return;
-        document.hidden ? intro.pause() : intro.resume();
+        document.hidden || covered ? intro.pause() : intro.resume();
       });
 
       const isDev = location.protocol === 'file:' || /^(localhost|127\.|\[::1\])/.test(location.hostname)
@@ -973,6 +1031,20 @@
         heroInner, heroBg, content, tiles, chips,
       };
     })();
+
+    /* ---------- Phase 6: header flips to its light style as the sheet reaches it ---------- */
+    if (hasGsap) {
+      const header = document.getElementById('site-header');
+      const logo = header.querySelector('.site-header__logo');
+      ScrollTrigger.create({
+        trigger: '#content',
+        start: () => `top ${logo.getBoundingClientRect().top + logo.offsetHeight / 2}px`,
+        end: 'max',
+        toggleClass: { targets: header, className: 'is-on-light' },
+      });
+      ScrollTrigger.addEventListener('refreshInit', updateHeroStick);
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
 
     /* ============================================================
        Phase 5: alert chips highlight the tiles that cause each problem
