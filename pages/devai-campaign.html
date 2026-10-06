@@ -17,6 +17,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400&family=Lato:wght@400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    /* Pre-paint flag: the HTML ships the hero's final state (works without JS). When JS is
+       on and motion is allowed, CSS hides the intro's elements until GSAP takes over, so
+       the finished hero never flashes before the sequence plays. */
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('js-hero-pending');
+    }
+  </script>
   <style>
     /* ============================================================
        Tokens — every value from the Figma frame, named by role.
@@ -129,8 +137,9 @@
        Reset
        ============================================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    /* No `scroll-behavior: smooth` here: it animates ScrollTrigger's measuring scroll and
+       corrupts every trigger position. In-page links smooth-scroll from JS instead. */
+    html { -webkit-text-size-adjust: 100%; }
     body {
       font-family: var(--font-sans);
       color: var(--color-text-body);
@@ -260,6 +269,9 @@
       max-width: var(--hero-copy-w);
       font-size: var(--text-lead); line-height: 1.25; color: var(--color-text-hero-body);
     }
+
+    .js-hero-pending .hero [data-reveal] { visibility: hidden; }
+    .js-hero-pending .search__input { color: transparent; }
 
     /* Search bar */
     .search {
@@ -582,7 +594,8 @@
       </form>
 
       <h2 class="visually-hidden">Search results for SRV-db-07</h2>
-      <p class="summary">
+      <p class="visually-hidden" id="hero-status" aria-live="polite"></p>
+      <p class="summary" data-reveal>
         <img src="../img/campaign/Server.svg" width="14" height="14" alt="">
         <strong>SRV-db-07</strong>
         <span class="summary__dot" aria-hidden="true">·</span>
@@ -592,28 +605,28 @@
       </p>
 
       <div class="tiles">
-        <article class="tile" data-tile="1" aria-labelledby="tile-1-title">
+        <article class="tile" data-reveal data-tile="1" aria-labelledby="tile-1-title">
           <h3 class="tile__title" id="tile-1-title">CMDB</h3>
           <dl class="tile__rows">
             <div class="tile__row"><dt>IP:</dt><dd class="is-alert">10.20.4.17</dd></div>
             <div class="tile__row"><dt>OS:</dt><dd class="is-alert">ubuntu 20.04</dd></div>
           </dl>
         </article>
-        <article class="tile" data-tile="2" aria-labelledby="tile-2-title">
+        <article class="tile" data-reveal data-tile="2" aria-labelledby="tile-2-title">
           <h3 class="tile__title" id="tile-2-title">Network SoT</h3>
           <dl class="tile__rows">
             <div class="tile__row"><dt>IP:</dt><dd class="is-alert">10.20.4.18</dd></div>
             <div class="tile__row"><dt>VLAN:</dt><dd>220</dd></div>
           </dl>
         </article>
-        <article class="tile" data-tile="3" aria-labelledby="tile-3-title">
+        <article class="tile" data-reveal data-tile="3" aria-labelledby="tile-3-title">
           <h3 class="tile__title" id="tile-3-title">Monitoring</h3>
           <dl class="tile__rows">
             <div class="tile__row"><dt>Last seen:</dt><dd class="is-alert">3 days ago</dd></div>
             <div class="tile__row"><dt>Alerts:</dt><dd>0</dd></div>
           </dl>
         </article>
-        <article class="tile" data-tile="4" aria-labelledby="tile-4-title">
+        <article class="tile" data-reveal data-tile="4" aria-labelledby="tile-4-title">
           <h3 class="tile__title" id="tile-4-title">EDR</h3>
           <dl class="tile__rows">
             <div class="tile__row"><dt>Agent:</dt><dd class="is-danger">Not found</dd></div>
@@ -623,10 +636,10 @@
       </div>
 
       <div class="chips" role="group" aria-label="Consequences of data disagreement">
-        <button class="chip" id="chip-1" data-chip="1" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Incidents take longer</span></button>
-        <button class="chip" id="chip-2" data-chip="2" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Automation breaks</span></button>
-        <button class="chip" id="chip-3" data-chip="3" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Audits get harder</span></button>
-        <button class="chip" id="chip-4" data-chip="4" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Security gaps go unseen</span></button>
+        <button class="chip" data-reveal id="chip-1" data-chip="1" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Incidents take longer</span></button>
+        <button class="chip" data-reveal id="chip-2" data-chip="2" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Automation breaks</span></button>
+        <button class="chip" data-reveal id="chip-3" data-chip="3" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Audits get harder</span></button>
+        <button class="chip" data-reveal id="chip-4" data-chip="4" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Security gaps go unseen</span></button>
       </div>
     </div>
   </section>
@@ -759,8 +772,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
   <script>
-    /* Register plugins once. */
-    gsap.registerPlugin(ScrollTrigger);
+    /* If the GSAP CDN is unreachable, show the static final hero instead of a hidden one. */
+    const hasGsap = Boolean(window.gsap && window.ScrollTrigger);
+    if (hasGsap) {
+      gsap.registerPlugin(ScrollTrigger);              /* register plugins once */
+    } else {
+      document.documentElement.classList.remove('js-hero-pending');
+    }
 
     /* ---------- Hero sticky offset ----------
        The hero pins with `top: 0` when it fits the viewport. When it is taller (phones),
@@ -774,6 +792,186 @@
     new ResizeObserver(updateHeroStick).observe(hero);
     window.addEventListener('resize', updateHeroStick);
     document.querySelector('.search').addEventListener('submit', (e) => e.preventDefault());
+
+    /* ============================================================
+       Hero controller
+       Phase 4: intro sequence (one GSAP timeline, ~4 s)
+       ============================================================ */
+    const heroCtl = hasGsap && (() => {
+      const root = document.documentElement;
+      const content = document.getElementById('content');
+      const heroInner = hero.querySelector('.hero__inner');
+      const heroBg = hero.querySelector('.hero__bg');
+      const input = hero.querySelector('.search__input');
+      const mirror = hero.querySelector('.search__mirror');
+      const caret = hero.querySelector('.search__caret');
+      const searchButton = hero.querySelector('.search__button');
+      const glow = hero.querySelector('.search__glow');
+      const summary = hero.querySelector('.summary');
+      const tiles = [...hero.querySelectorAll('.tile')];
+      const chips = [...hero.querySelectorAll('.chip')];
+      const mismatches = [...hero.querySelectorAll('.tile__row dd.is-alert, .tile__row dd.is-danger')];
+      const status = document.getElementById('hero-status');
+      const QUERY = input.value;                       // the real, final input value
+      const NEUTRAL = '#ffffff';
+      const PRESS = getComputedStyle(root).getPropertyValue('--color-accent-indigo-down').trim();
+
+      let phase = 'idle';                              // idle | playing | ready
+      let intro = null;
+      const listeners = { ready: [] };
+
+      function setPhase(next) {
+        phase = next;
+        hero.dataset.heroState = next;
+        if (next === 'ready') listeners.ready.forEach((fn) => fn());
+      }
+
+      function setTyped(count) {
+        const text = QUERY.slice(0, count);
+        input.value = text;
+        mirror.textContent = text;
+        gsap.set(caret, { x: mirror.offsetWidth });
+      }
+
+      function becomeReady() {
+        input.removeAttribute('aria-live');
+        input.value = QUERY;
+        chips.forEach((c) => { c.disabled = false; });
+        status.textContent = `Showing ${tiles.length} answers for ${QUERY}.`;
+        setPhase('ready');
+      }
+
+      /* Everything starts in its final layout; this only hides what the intro reveals. */
+      function preState() {
+        setTyped(0);
+        input.setAttribute('aria-live', 'off');
+        chips.forEach((c) => { c.disabled = true; });
+        gsap.set(caret, { autoAlpha: 1 });
+        gsap.set([summary, ...tiles, ...chips], { autoAlpha: 0 });
+        gsap.set(glow, { autoAlpha: 0 });
+        gsap.set(mismatches, { color: NEUTRAL });
+        status.textContent = '';
+        setPhase('idle');
+      }
+
+      function buildIntro() {
+        const tl = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' } });
+
+        // 1. Caret blinks alone (0–600 ms)
+        tl.to(caret, { autoAlpha: 0, duration: 0.3, repeat: 1, yoyo: true, ease: 'steps(1)' }, 0);
+
+        // 2. Type the query, 70–110 ms apart with jitter; the caret follows (600 ms →)
+        let t = 0.6;
+        tl.set(caret, { autoAlpha: 1 }, t);
+        for (let i = 1; i <= QUERY.length; i++) {
+          tl.call(setTyped, [i], t);
+          t += gsap.utils.random(0.07, 0.11);
+        }
+        // caret idles (blinks) while the search runs, until step 9
+        tl.to(caret, { autoAlpha: 0, duration: 0.4, repeat: 5, yoyo: true, ease: 'steps(1)' }, Math.max(t, 1.45));
+
+        // 3. Search button pressed, then released (1500 ms)
+        tl.to(searchButton, { scale: 0.96, backgroundColor: PRESS, duration: 0.06, ease: 'power1.out' }, 1.5)
+          .to(searchButton, { scale: 1, backgroundColor: '', duration: 0.14, ease: 'power1.inOut', clearProps: 'transform,backgroundColor' }, 1.62);
+
+        // 4. Searching: the bar's glow pulses (1700–2300 ms)
+        tl.to(glow, { autoAlpha: 1, duration: 0.3, repeat: 1, yoyo: true, ease: 'sine.inOut' }, 1.7);
+
+        // 5. Summary line (2300 ms)
+        tl.fromTo(summary, { autoAlpha: 0, y: 8 },
+          { autoAlpha: 1, y: 0, duration: 0.3, immediateRender: false, clearProps: 'transform' }, 2.3);
+
+        // 6. Tiles 1→4, staggered 120 ms (2500 ms)
+        tl.fromTo(tiles, { autoAlpha: 0, y: 16 },
+          { autoAlpha: 1, y: 0, duration: 0.4, stagger: 0.12, immediateRender: false, clearProps: 'opacity,visibility,transform' }, 2.5);
+
+        // 7. Mismatching values flicker once from neutral to their alert colour (3300 ms, 250 ms)
+        mismatches.forEach((el) => {
+          const alertColor = getComputedStyle(el).color;
+          tl.fromTo(el, { color: NEUTRAL }, { color: alertColor, duration: 0.07, ease: 'none', immediateRender: false }, 3.3)
+            .to(el, { color: NEUTRAL, duration: 0.06, ease: 'none' }, 3.37)
+            .to(el, { color: alertColor, duration: 0.12, ease: 'none', clearProps: 'color' }, 3.43);
+        });
+
+        // 8. Chips 1→4, staggered 100 ms (3500 ms)
+        tl.fromTo(chips, { autoAlpha: 0, scale: 0.92 },
+          { autoAlpha: 1, scale: 1, duration: 0.3, stagger: 0.1, ease: 'back.out(1.6)', immediateRender: false, clearProps: 'opacity,visibility,transform' }, 3.5);
+
+        // 9. Caret stops; chips become interactive (4000 ms)
+        tl.set(caret, { autoAlpha: 0 }, 4.0);
+        tl.call(becomeReady, null, 4.0);
+        return tl;
+      }
+
+      function play() {
+        if (!intro || phase !== 'idle') return;
+        setPhase('playing');
+        intro.play(0);
+        if (document.hidden) intro.pause();
+      }
+
+      function replay() {
+        if (!intro) return;
+        intro.pause(0);
+        preState();
+        play();
+      }
+
+      const mm = gsap.matchMedia();
+      mm.add({
+        motion: '(prefers-reduced-motion: no-preference)',
+        reduce: '(prefers-reduced-motion: reduce)',
+      }, (ctx) => {
+        if (ctx.conditions.reduce) {
+          intro = null;
+          becomeReady();                               // final state, immediately
+          return;
+        }
+
+        preState();
+        intro = buildIntro();
+        hero.dataset.heroMounted = '';
+        root.classList.remove('js-hero-pending');
+
+        // Play only while the hero is at least half visible, i.e. before the content
+        // sheet's top edge has risen past the middle of the viewport.
+        // With a #hash the browser jumps to the anchor after this script runs, so the
+        // first check waits for `load` instead of reading the pre-jump scroll position.
+        let armed = !location.hash || document.readyState === 'complete';
+        const gate = ScrollTrigger.create({
+          trigger: content,
+          start: 'top 50%',
+          onLeaveBack: play,
+          onRefresh: (self) => { if (armed && self.scroll() < self.start) play(); },
+        });
+        const check = () => { armed = true; if (gate.scroll() < gate.start) play(); };
+        if (armed) check();
+        else window.addEventListener('load', () => requestAnimationFrame(check), { once: true });
+
+        return () => {                                 // media change: jump to the final state
+          intro?.progress(1).kill();
+          intro = null;
+          gsap.set([summary, ...tiles, ...chips, caret, glow, ...mismatches], { clearProps: 'all' });
+          root.classList.remove('js-hero-pending');
+        };
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!intro || phase !== 'playing') return;
+        document.hidden ? intro.pause() : intro.resume();
+      });
+
+      const isDev = location.protocol === 'file:' || /^(localhost|127\.|\[::1\])/.test(location.hostname)
+        || new URLSearchParams(location.search).has('debug');
+      if (isDev) window.__heroReplay = replay;
+
+      return {
+        get phase() { return phase; },
+        get intro() { return intro; },
+        onReady(fn) { listeners.ready.push(fn); if (phase === 'ready') fn(); },
+        heroInner, heroBg, content, tiles, chips,
+      };
+    })();
 
     /* ---------- Missing-asset placeholders: swap in the real file once it exists ---------- */
     document.querySelectorAll('.asset-ph[data-asset]').forEach((ph) => {
@@ -808,6 +1006,19 @@
         success.focus();
       });
     })();
+
+    /* ---------- Smooth in-page anchors (CSS smooth scrolling would break ScrollTrigger) ---------- */
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a[href^="#"]');
+      const target = link && link.getAttribute('href').length > 1 && document.querySelector(link.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      history.pushState(null, '', link.getAttribute('href'));
+      const focusable = target.querySelector('input, button, a[href]');
+      focusable?.focus({ preventScroll: true });
+    });
 
     /* ---------- Mobile nav toggle (CSS owns the open/closed state) ---------- */
     (() => {
