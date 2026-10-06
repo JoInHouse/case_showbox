@@ -14,9 +14,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DevAI — Get Your IT Data Truth Score</title>
+  <meta name="description" content="In 3 weeks, DevAI measures how far your CMDB, network source of truth, monitoring and EDR data have drifted apart, using your own data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400&family=Lato:wght@400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Font CSS loads without blocking first paint; display=swap keeps text visible. -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400&amp;family=Lato:wght@400&amp;family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400&amp;family=Lato:wght@400&amp;family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap"></noscript>
   <script>
     /* Pre-paint flag: the HTML ships the hero's final state (works without JS). When JS is
        on and motion is allowed, CSS hides the intro's elements until GSAP takes over, so
@@ -54,7 +57,7 @@
       --color-text-form:          #06001a;               /* Text/Dark */
       --color-text-placeholder:   #b4b4b4;
       --color-text-input:         #000000;               /* Labels/Primary */
-      --color-text-footer:        #707793;               /* Grey - 10 */
+      --color-text-footer:        #737a95;               /* Grey - 10 (#707793) nudged to 4.65:1 for WCAG AA */
       --color-text-on-accent:     #0d1336;
       --color-text-required:      #ec2138;
 
@@ -62,7 +65,8 @@
       --color-accent-green:       #41ea97;               /* CTA pill */
       --color-accent-green-hover: #2fdc87;
       --color-accent-teal:        #32c7a9;               /* chip border, logo dots */
-      --color-accent-indigo:      #6271eb;               /* Brand/Indigo500 — search button */
+      --color-accent-indigo:      #6271eb;               /* Brand/Indigo500 — focus ring */
+      --color-search-button:      #5c6add;               /* Indigo500 darkened to 4.6:1 behind white text */
       --color-accent-indigo-down: #4c5bd4;
       --color-alert:              #e67e27;               /* mismatching values */
       --color-danger:             #d40000;               /* "Not found" */
@@ -306,7 +310,7 @@
     }
     .search__button {
       flex: none; padding: 4px 16px; border-radius: var(--radius-button);
-      background: var(--color-accent-indigo); color: var(--color-text-on-dark);
+      background: var(--color-search-button); color: var(--color-text-on-dark);
       font-size: var(--text-sm);
       transition: background-color var(--dur-state) ease;
     }
@@ -531,6 +535,8 @@
       transition: opacity var(--dur-header) ease;
     }
     .site-header.is-on-light::before { opacity: 1; }
+    /* Phones: the tall hero scrolls under the header, so give it a dark band there too. */
+    .site-header.is-scrolled:not(.is-on-light)::before { opacity: 1; background: rgba(4, 8, 34, 0.9); }
     .site-header__inner { position: relative; }
     .site-header.is-on-light .site-header__logo { color: var(--color-bg-hero); }
     .site-header.is-on-light .site-nav ul,
@@ -1041,6 +1047,10 @@
         start: () => `top ${logo.getBoundingClientRect().top + logo.offsetHeight / 2}px`,
         end: 'max',
         toggleClass: { targets: header, className: 'is-on-light' },
+      });
+      ScrollTrigger.create({
+        start: 8, end: 'max',
+        toggleClass: { targets: header, className: 'is-scrolled' },
       });
       ScrollTrigger.addEventListener('refreshInit', updateHeroStick);
       document.fonts.ready.then(() => ScrollTrigger.refresh());
