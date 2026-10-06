@@ -87,8 +87,11 @@ logs a 404 for each one, and that is expected.
    header has a permanent `#040822` background, so the logo and nav always sit on
    dark blue and the white sheet slides under the header's bottom edge. The hero
    recede ends, and the hero counts as covered, when the sheet reaches that edge.
-   This replaces the guide's Phase 6.4 `.is-on-light` flip. Anchor links clear the
-   bar via `scroll-margin-top: calc(var(--header-h) + 16px)`.
+   This replaces the guide's Phase 6.4 `.is-on-light` flip. On desktop the bar
+   compacts from 134 px to 86 px (`--header-h-compact`) once the page scrolls past
+   8 px. It uses transforms only: the bar moves up 48 px and its contents move down
+   24 px. Phones keep their 72 px bar. Anchor links clear the compact bar via
+   `scroll-margin-top: calc(var(--header-h-compact) + 16px)`.
 7. **Additions not in Figma:**
    - a hamburger menu below 900 px;
    - the sign-up success message: "You're on the list! Thanks, {name}. We'll

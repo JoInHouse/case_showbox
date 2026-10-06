@@ -207,6 +207,14 @@
       display: flex; align-items: center; justify-content: space-between;
       max-width: var(--page-max); margin-inline: auto; padding: var(--header-pad);
     }
+    /* Compact on scroll (desktop): transforms only, no layout animation. The bar slides
+       up 48px and its contents slide back down 24px, leaving an 86px bar with the nav
+       centred in it. */
+    @media (min-width: 900px) {
+      .site-header, .site-header__inner { transition: transform var(--dur-header) ease; }
+      .site-header.is-compact { transform: translateY(calc(var(--header-h-compact) - var(--header-h))); }
+      .site-header.is-compact .site-header__inner { transform: translateY(calc((var(--header-h) - var(--header-h-compact)) / 2)); }
+    }
     .site-header__logo { display: block; }
     .site-header__logo img { width: 78.34px; height: 26.75px; }
 
@@ -250,7 +258,7 @@
     /* ============================================================
        Hero (final state; Phase 4 only reveals what is laid out here)
        ============================================================ */
-    :root { --header-h: 134px; --hero-gap: clamp(20px, 4.4vh, 40px); }
+    :root { --header-h: 134px; --header-h-compact: 86px; --hero-gap: clamp(20px, 4.4vh, 40px); }
     .hero__bg {
       --ring-w: max(100vw, 1100px);
       position: absolute; left: 50%; bottom: calc(var(--ring-w) * -0.218);   /* ring crest sits just above the search bar, as in Figma */
@@ -379,7 +387,7 @@
       .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(720px, 100%); }
     }
     @media (max-width: 899px) {
-      :root { --header-h: 72px; }
+      :root { --header-h: 72px; --header-h-compact: 72px; }   /* already compact on phones */
     }
     @media (max-width: 639px) {
       .hero__lead { font-size: 17px; }
@@ -431,7 +439,7 @@
       flex: none; width: var(--form-w);
       background: var(--color-surface-form);
       border: 1px solid var(--color-border-light); border-radius: var(--radius-card);
-      padding: 20px; scroll-margin-top: calc(var(--header-h) + 16px);   /* clear the solid header */
+      padding: 20px; scroll-margin-top: calc(var(--header-h-compact) + 16px);   /* clear the (compact) header */
     }
     .signup__form { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     .signup__title {
@@ -796,7 +804,7 @@
     const heroCtl = hasGsap && (() => {
       const root = document.documentElement;
       const content = document.getElementById('content');
-      const header = document.getElementById('site-header');
+      const compactHeaderHeight = () => parseFloat(getComputedStyle(root).getPropertyValue('--header-h-compact'));
       const heroInner = hero.querySelector('.hero__inner');
       const heroBg = hero.querySelector('.hero__bg');
       const input = hero.querySelector('.search__input');
@@ -965,7 +973,7 @@
           scrollTrigger: {
             trigger: content,
             start: 'top bottom',
-            end: () => `top ${header.offsetHeight}px`,   // hero is gone once the sheet meets the header
+            end: () => `top ${compactHeaderHeight()}px`,  // hero is gone once the sheet meets the (compact) header
             scrub: 0.4,
             onToggle: (self) => { heroInner.style.willChange = self.isActive ? 'transform, opacity' : ''; },
             onLeave: () => setCovered(true),
@@ -1001,8 +1009,13 @@
       };
     })();
 
-    /* ---------- ScrollTrigger housekeeping ---------- */
+    /* ---------- Header compacts once the page scrolls; ScrollTrigger housekeeping ---------- */
     if (hasGsap) {
+      ScrollTrigger.create({
+        start: 8,
+        end: 'max',
+        toggleClass: { targets: '#site-header', className: 'is-compact' },
+      });
       ScrollTrigger.addEventListener('refreshInit', updateHeroStick);
       document.fonts.ready.then(() => ScrollTrigger.refresh());
     }
