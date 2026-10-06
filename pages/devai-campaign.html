@@ -144,16 +144,205 @@
     button, input { font: inherit; color: inherit; }
     button { background: none; border: 0; cursor: pointer; }
     ul { list-style: none; }
+
+    .visually-hidden {
+      position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    :focus-visible { outline: 2px solid var(--color-accent-teal); outline-offset: 3px; }
+
+    /* Placeholder for an asset that hasn't been exported yet (see img/campaign/ASSETS.md).
+       Swapped for the real file automatically once it exists. */
+    .asset-ph {
+      display: inline-block; flex: none; vertical-align: middle;
+      width: var(--ph-size, 12px); height: var(--ph-size, 12px);
+      background: #9a9aa6; border-radius: 2px;
+    }
+    .asset-ph--loaded { background: none; border-radius: 0; }
+    .asset-ph--loaded img { width: 100%; height: 100%; }
+
+    .container {
+      width: 100%; max-width: var(--page-max);
+      margin-inline: auto; padding-inline: var(--page-gutter);
+    }
+
+    /* ============================================================
+       Page regions: stacking contract
+       header (fixed, z 30) › content + footer (relative, z 10) › hero (sticky, z 0)
+       ============================================================ */
+    .site-header { position: fixed; inset: 0 0 auto; z-index: 30; }
+    .hero {
+      position: sticky; top: var(--hero-stick, 0px); z-index: 0;
+      min-height: 100vh; min-height: 100svh;
+      overflow: hidden; background: var(--color-bg-hero);
+    }
+    .content {
+      position: relative; z-index: 10;
+      background: var(--color-bg-content);
+      border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    }
+    .site-footer { position: relative; z-index: 10; background: var(--color-bg-footer); }
+
+    /* ============================================================
+       Header
+       ============================================================ */
+    .site-header__inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: var(--page-max); margin-inline: auto; padding: var(--header-pad);
+      pointer-events: none;           /* the empty band never blocks the page */
+    }
+    .site-header__inner > * { pointer-events: auto; }
+    .site-header__logo { display: block; color: #dedede; transition: color var(--dur-header) ease; }
+    .site-header__logo svg { width: 78.34px; height: 26.75px; }
+
+    .site-nav ul {
+      display: flex; align-items: center; gap: 40px;
+      height: var(--nav-h); padding: 16px;
+      background: var(--color-surface-overlay);
+      border: 1px solid var(--color-border-nav);
+      border-radius: var(--radius-nav);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      transition: background-color var(--dur-header) ease, border-color var(--dur-header) ease;
+    }
+    .site-nav a {
+      display: flex; align-items: center; gap: 4px;
+      font-family: var(--font-nav); font-size: var(--text-nav); line-height: 22px;
+      color: var(--color-text-on-dark); white-space: nowrap;
+      transition: color var(--dur-header) ease;
+    }
+    .site-nav a:hover { color: var(--color-accent-teal); }
+    .site-nav__login { border-left: 1px solid var(--color-border-nav-divider); padding-inline: 16px; margin-right: -16px; transition: border-color var(--dur-header) ease; }
+
+    .site-header__toggle {
+      display: none; width: 40px; height: 40px; border-radius: 12px;
+      background: var(--color-surface-overlay); border: 1px solid var(--color-border-nav);
+      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+      align-items: center; justify-content: center;
+      transition: background-color var(--dur-header) ease, border-color var(--dur-header) ease;
+    }
+    .site-header__bars, .site-header__bars::before, .site-header__bars::after {
+      display: block; width: 18px; height: 2px; border-radius: 1px;
+      background: var(--color-text-on-dark); position: relative;
+      transition: transform var(--dur-state) ease, background-color var(--dur-header) ease;
+    }
+    .site-header__bars::before, .site-header__bars::after { content: ""; position: absolute; left: 0; }
+    .site-header__bars::before { top: -6px; }
+    .site-header__bars::after  { top: 6px; }
+    .site-header__toggle[aria-expanded="true"] .site-header__bars { background: transparent; }
+    .site-header__toggle[aria-expanded="true"] .site-header__bars::before { transform: translateY(6px) rotate(45deg); }
+    .site-header__toggle[aria-expanded="true"] .site-header__bars::after  { transform: translateY(-6px) rotate(-45deg); }
+
+    /* ============================================================
+       Hero
+       ============================================================ */
+    .hero__inner {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      padding: calc(134px + 60px) var(--page-gutter) 60px;
+    }
+    .hero__title {
+      font-size: var(--text-display); font-weight: 600; line-height: 1.25;
+      color: var(--color-text-hero-heading); text-align: center;
+    }
+
+    @media (max-width: 899px) {
+      :root { --header-pad: 16px 20px; --page-gutter: 20px; }
+      .site-header__toggle { display: inline-flex; }
+      .site-nav {
+        position: absolute; top: 64px; left: 20px; right: 20px;
+        visibility: hidden; opacity: 0; transform: translateY(-6px);
+        transition: opacity var(--dur-state) ease, transform var(--dur-state) ease, visibility 0s linear var(--dur-state);
+      }
+      .site-nav.is-open {
+        visibility: visible; opacity: 1; transform: none;
+        transition: opacity var(--dur-state) ease, transform var(--dur-state) ease;
+      }
+      .site-nav ul {
+        flex-direction: column; align-items: stretch; gap: 0; height: auto; padding: 8px;
+        background: rgba(4, 8, 34, 0.92);
+      }
+      .site-nav a { padding: 12px; justify-content: space-between; }
+      .site-nav__login { border-left: 0; border-top: 1px solid var(--color-border-nav-divider); padding: 0; margin: 4px 0 0; }
+    }
   </style>
 </head>
 <body>
-  <h1 class="visually-hidden">DevAI — Get Your IT Data Truth Score</h1>
+  <header class="site-header" id="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__logo" href="#" aria-label="DevAI home">
+        <svg aria-hidden="true" focusable="false" width="79" height="27" viewBox="0 0 79 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M35.1093 2.51426C35.9775 2.1525 36.9746 2.56307 37.3364 3.4313L44.2796 20.0951L51.2229 3.4313C51.5846 2.56307 52.5817 2.1525 53.45 2.51426C54.3182 2.87602 54.7288 3.87312 54.367 4.74134L45.8517 25.1781C45.5872 25.8127 44.9671 26.2261 44.2796 26.2261C43.5921 26.2261 42.972 25.8127 42.7076 25.1781L34.1922 4.74134C33.8305 3.87312 34.2411 2.87602 35.1093 2.51426Z" fill="currentColor"/>
+<circle cx="2.55459" cy="13.6249" r="2.55459" fill="#32C7A9"/>
+<circle cx="75.7863" cy="2.55459" r="2.55459" fill="#32C7A9"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M60.3559 2.48483C61.2398 2.16313 62.2171 2.61885 62.5388 3.5027L69.9945 23.9873C70.3162 24.8711 69.8605 25.8484 68.9767 26.1701C68.0928 26.4918 67.1155 26.0361 66.7938 25.1522L59.3381 4.66766C59.0164 3.78381 59.4721 2.80652 60.3559 2.48483Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M75.7862 6.64062C76.7268 6.64062 77.4893 7.40311 77.4893 8.34369L77.4893 24.6931C77.4893 25.6337 76.7268 26.3962 75.7862 26.3962C74.8456 26.3962 74.0831 25.6337 74.0831 24.6931L74.0831 8.34369C74.0831 7.40311 74.8456 6.64062 75.7862 6.64062Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M62.332 18.2227C62.332 19.1633 61.5695 19.9258 60.629 19.9258L57.2228 19.9258C56.2823 19.9258 55.5198 19.1633 55.5198 18.2227C55.5198 17.2821 56.2823 16.5197 57.2228 16.5197L60.629 16.5197C61.5695 16.5197 62.332 17.2821 62.332 18.2227Z" fill="currentColor"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M30.9958 13.793C30.9958 14.7336 30.2334 15.4961 29.2928 15.4961L25.8867 15.4961C24.9461 15.4961 24.1836 14.7336 24.1836 13.793C24.1836 12.8525 24.9461 12.09 25.8867 12.09L29.2928 12.09C30.2334 12.09 30.9958 12.8525 30.9958 13.793Z" fill="currentColor"/>
+<path d="M11.2401 13.7964C11.2401 9.09356 7.42767 5.28113 2.72479 5.28113C1.78421 5.28113 1.02173 4.51864 1.02173 3.57806C1.02173 2.63749 1.78421 1.875 2.72479 1.875C9.30882 1.875 14.6462 7.21241 14.6462 13.7964C14.6462 20.3805 9.30882 25.7179 2.72479 25.7179C1.78421 25.7179 1.02173 24.9554 1.02173 24.0148C1.02173 23.0742 1.78421 22.3118 2.72479 22.3118C7.42767 22.3118 11.2401 18.4993 11.2401 13.7964Z" fill="currentColor"/>
+<path d="M29.2928 1.875C22.7088 1.875 17.3713 7.21241 17.3713 13.7964C17.3713 20.3805 22.7087 25.7179 29.2928 25.7179C30.2334 25.7179 30.9958 24.9554 30.9958 24.0148C30.9958 23.0742 30.2334 22.3118 29.2928 22.3118C24.5899 22.3118 20.7775 18.4993 20.7775 13.7964C20.7775 9.09356 24.5899 5.28113 29.2928 5.28113C30.2334 5.28113 30.9958 4.51864 30.9958 3.57806C30.9958 2.63749 30.2334 1.875 29.2928 1.875Z" fill="currentColor"/>
+</svg>
+      </a>
+      <button class="site-header__toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span class="site-header__bars" aria-hidden="true"></span>
+        <span class="visually-hidden">Menu</span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#">Home</a></li><!-- TODO(owner): real URLs for all nav links -->
+          <li><a href="#">Solution <span class="asset-ph" data-asset="arrow-right.svg" aria-hidden="true"></span></a></li>
+          <li><a href="#">Newsroom <span class="asset-ph" data-asset="arrow-right.svg" aria-hidden="true"></span></a></li>
+          <li><a href="#">Book a demo <span class="asset-ph" data-asset="arrow-right.svg" aria-hidden="true"></span></a></li>
+          <li class="site-nav__login"><a href="#">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero" id="hero" aria-labelledby="hero-title">
+    <div class="hero__inner">
+      <h1 class="hero__title" id="hero-title">When your IT tools disagree,</h1>
+    </div>
+  </section>
+
+  <main class="content" id="content">
+    <div class="container" style="min-height: 1600px; padding-top: 60px;">
+      <h2>Get Your IT Data Truth Score</h2>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container" style="padding-block: 40px; color: var(--color-text-footer);">Copyright © 2026 DevAI. All rights reserved.</div>
+  </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
   <script>
     /* Register plugins once. */
     gsap.registerPlugin(ScrollTrigger);
+
+    /* ---------- Missing-asset placeholders: swap in the real file once it exists ---------- */
+    document.querySelectorAll('.asset-ph[data-asset]').forEach((ph) => {
+      const img = new Image();
+      img.alt = '';
+      img.onload = () => { ph.replaceChildren(img); ph.classList.add('asset-ph--loaded'); };
+      img.src = `../img/campaign/${ph.dataset.asset}`;
+    });
+
+    /* ---------- Mobile nav toggle (CSS owns the open/closed state) ---------- */
+    (() => {
+      const toggle = document.querySelector('.site-header__toggle');
+      const nav = document.getElementById('site-nav');
+      const setOpen = (open) => {
+        toggle.setAttribute('aria-expanded', String(open));
+        nav.classList.toggle('is-open', open);
+      };
+      toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+      nav.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && nav.classList.contains('is-open')) { setOpen(false); toggle.focus(); }
+      });
+      matchMedia('(min-width: 900px)').addEventListener('change', () => setOpen(false));
+    })();
   </script>
 </body>
 </html>
