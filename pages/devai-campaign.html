@@ -234,18 +234,143 @@
     .site-header__toggle[aria-expanded="true"] .site-header__bars::after  { transform: translateY(-6px) rotate(-45deg); }
 
     /* ============================================================
-       Hero
+       Hero (final state; Phase 4 only reveals what is laid out here)
        ============================================================ */
+    :root { --header-h: 134px; --hero-gap: clamp(20px, 4.4vh, 40px); }
+    .hero__bg {
+      --ring-w: max(100vw, 1100px);
+      position: absolute; left: 50%; bottom: calc(var(--ring-w) * -0.218);   /* ring crest sits just above the search bar, as in Figma */
+      width: var(--ring-w); margin-left: calc(var(--ring-w) / -2);
+      pointer-events: none;
+    }
+    .hero__bg img { width: 100%; height: auto; }
     .hero__inner {
       position: relative;
-      display: flex; flex-direction: column; align-items: center;
-      padding: calc(134px + 60px) var(--page-gutter) 60px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--hero-gap);
+      min-height: 100vh; min-height: 100svh;
+      padding: calc(var(--header-h) + clamp(16px, 6.6vh, 60px)) var(--page-gutter) clamp(24px, 6.6vh, 60px);
     }
+    .hero__copy { display: flex; flex-direction: column; align-items: center; gap: var(--hero-gap); }
     .hero__title {
       font-size: var(--text-display); font-weight: 600; line-height: 1.25;
       color: var(--color-text-hero-heading); text-align: center;
     }
+    .hero__lead {
+      max-width: var(--hero-copy-w);
+      font-size: var(--text-lead); line-height: 1.25; color: var(--color-text-hero-body);
+    }
 
+    /* Search bar */
+    .search {
+      position: relative; display: flex; gap: 8px;
+      width: min(var(--search-w), 100%); height: 56px; padding: 8px;
+      background: var(--color-surface-overlay);
+      border: 1px solid var(--color-border-search); border-radius: var(--radius-search);
+      box-shadow: var(--shadow-search);
+    }
+    .search__glow {
+      position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0;
+      box-shadow: 0 0 0 3px rgba(98, 113, 235, 0.35), 0 0 32px 6px rgba(98, 113, 235, 0.45);
+    }
+    .search__box {
+      position: relative; flex: 1; min-width: 0; display: flex; align-items: center;
+      background: var(--color-surface-searchbox);
+      border: 1px solid var(--color-border-searchbox); border-radius: var(--radius-search);
+    }
+    .search__box:focus-within { outline: 2px solid var(--color-accent-teal); outline-offset: 2px; }
+    .search__input, .search__mirror { font-family: var(--font-sans); font-size: var(--text-sm); }
+    .search__input {
+      width: 100%; height: 100%; padding: 4px 8px;
+      border: 0; background: transparent; outline: none;
+      color: var(--color-text-input); caret-color: transparent;
+    }
+    .search__mirror { position: absolute; visibility: hidden; white-space: pre; }
+    .search__caret {
+      position: absolute; top: 50%; left: 8px; width: 1px; height: 18px; margin-top: -9px;
+      background: var(--color-text-input); opacity: 0; pointer-events: none;
+    }
+    .search__button {
+      flex: none; padding: 4px 16px; border-radius: var(--radius-button);
+      background: var(--color-accent-indigo); color: var(--color-text-on-dark);
+      font-size: var(--text-sm);
+      transition: background-color var(--dur-state) ease;
+    }
+    .search__button:hover { background: var(--color-accent-indigo-down); }
+
+    /* Result summary line */
+    .summary {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--color-text-hero-body); font-size: var(--text-body); line-height: 20px;
+    }
+    .summary strong { font-weight: 600; }
+    .summary em { font-size: var(--text-sm); }
+
+    /* Result tiles */
+    .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; width: min(var(--hero-max), 100%); }
+    .tile {
+      display: flex; flex-direction: column; gap: 16px; padding: 16px;
+      background: var(--color-surface-tile);
+      border: 1px solid var(--color-border-tile); border-radius: var(--radius-tile);
+      transition: border-color var(--dur-state) ease, box-shadow var(--dur-state) ease,
+                  opacity var(--dur-state) ease, background-color var(--dur-state) ease;
+    }
+    .tile__title {
+      font-size: var(--text-title); font-weight: 400; line-height: 32px; letter-spacing: 1.4px;
+      color: var(--color-text-tile-title);
+    }
+    .tile__rows { display: flex; flex-direction: column; gap: 4px; }
+    .tile__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 18px; }
+    .tile__row dt { font-size: var(--text-xs); color: var(--color-text-label); white-space: nowrap; }
+    .tile__row dd { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-on-dark); white-space: nowrap; }
+    .tile__row dd.is-alert  { color: var(--color-alert); }
+    .tile__row dd.is-danger { color: var(--color-danger); }
+
+    /* Tile states (driven by the alert chips) */
+    .tile.is-highlighted {
+      border-color: var(--color-accent-teal);
+      background-color: var(--color-surface-tile-lift);
+      box-shadow: 0 0 0 1px var(--color-accent-teal), 0 0 28px rgba(50, 199, 169, 0.35);
+    }
+    .tile.is-previewed:not(.is-highlighted) {
+      border-color: rgba(50, 199, 169, 0.6);
+      box-shadow: 0 0 14px rgba(50, 199, 169, 0.16);
+    }
+    .tile.is-dimmed { opacity: 0.35; }
+
+    /* Alert chips */
+    .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px;
+      background: var(--color-surface-overlay);
+      border: 1px solid var(--color-accent-teal); border-radius: var(--radius-pill);
+      font-family: var(--font-nav); font-size: var(--text-sm); line-height: 17px;
+      color: var(--color-text-on-dark); white-space: nowrap;
+      transition: background-color var(--dur-state) ease, color var(--dur-state) ease, border-color var(--dur-state) ease;
+    }
+    .chip img { flex: none; width: 14px; height: 14px; transition: filter var(--dur-state) ease; }
+    .chip:disabled { cursor: default; }
+    @media (hover: hover) {
+      .chip:not(:disabled):not(.is-active):hover { background: rgba(50, 199, 169, 0.14); }
+    }
+    .chip.is-active { background: var(--color-accent-teal); color: var(--color-bg-hero); }
+    .chip.is-active img { filter: brightness(0); }
+    .chip:focus-visible { outline-color: var(--color-text-on-dark); }
+
+    @media (max-width: 1099px) {
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(720px, 100%); }
+    }
+    @media (max-width: 899px) {
+      :root { --header-h: 72px; }
+    }
+    @media (max-width: 639px) {
+      .hero__lead { font-size: 17px; }
+      .tiles { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .tile { gap: 8px; }
+      .chips { gap: 8px; }
+      .chip { padding: 9px 11px; gap: 6px; font-size: 13px; }
+      .summary { flex-wrap: wrap; justify-content: center; }
+    }
 
     /* ============================================================
        Content sheet
@@ -436,8 +561,73 @@
   </header>
 
   <section class="hero" id="hero" aria-labelledby="hero-title">
+    <div class="hero__bg" aria-hidden="true">
+      <img src="../img/campaign/FocusArea_bg.svg" width="1920" height="1066" alt="" fetchpriority="high">
+    </div>
     <div class="hero__inner">
-      <h1 class="hero__title" id="hero-title">When your IT tools disagree,</h1>
+      <div class="hero__copy">
+        <h1 class="hero__title" id="hero-title">When your IT tools disagree,</h1>
+        <p class="hero__lead">Your CMDB, network source of truth, monitoring, EDR and asset discovery tools each hold their own version of reality. When they disagree, incidents take longer, audits get harder, security gaps go unseen, and automation breaks.</p>
+      </div>
+
+      <form class="search" role="search" aria-label="Asset search (demo)">
+        <span class="search__glow" aria-hidden="true"></span>
+        <div class="search__box">
+          <label class="visually-hidden" for="hero-search">Search assets</label>
+          <input class="search__input" id="hero-search" type="text" value="SRV-db-07" readonly autocomplete="off" spellcheck="false">
+          <span class="search__mirror" aria-hidden="true"></span>
+          <span class="search__caret" aria-hidden="true"></span>
+        </div>
+        <button class="search__button" type="submit">Search</button>
+      </form>
+
+      <h2 class="visually-hidden">Search results for SRV-db-07</h2>
+      <p class="summary">
+        <img src="../img/campaign/Server.svg" width="14" height="14" alt="">
+        <strong>SRV-db-07</strong>
+        <span class="summary__dot" aria-hidden="true">·</span>
+        <em>1 Server</em>
+        <span class="summary__dot" aria-hidden="true">·</span>
+        <em>5 answers</em>
+      </p>
+
+      <div class="tiles">
+        <article class="tile" data-tile="1" aria-labelledby="tile-1-title">
+          <h3 class="tile__title" id="tile-1-title">CMDB</h3>
+          <dl class="tile__rows">
+            <div class="tile__row"><dt>IP:</dt><dd class="is-alert">10.20.4.17</dd></div>
+            <div class="tile__row"><dt>OS:</dt><dd class="is-alert">ubuntu 20.04</dd></div>
+          </dl>
+        </article>
+        <article class="tile" data-tile="2" aria-labelledby="tile-2-title">
+          <h3 class="tile__title" id="tile-2-title">Network SoT</h3>
+          <dl class="tile__rows">
+            <div class="tile__row"><dt>IP:</dt><dd class="is-alert">10.20.4.18</dd></div>
+            <div class="tile__row"><dt>VLAN:</dt><dd>220</dd></div>
+          </dl>
+        </article>
+        <article class="tile" data-tile="3" aria-labelledby="tile-3-title">
+          <h3 class="tile__title" id="tile-3-title">Monitoring</h3>
+          <dl class="tile__rows">
+            <div class="tile__row"><dt>Last seen:</dt><dd class="is-alert">3 days ago</dd></div>
+            <div class="tile__row"><dt>Alerts:</dt><dd>0</dd></div>
+          </dl>
+        </article>
+        <article class="tile" data-tile="4" aria-labelledby="tile-4-title">
+          <h3 class="tile__title" id="tile-4-title">EDR</h3>
+          <dl class="tile__rows">
+            <div class="tile__row"><dt>Agent:</dt><dd class="is-danger">Not found</dd></div>
+            <div class="tile__row"><dt>Policy:</dt><dd>None</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <div class="chips" role="group" aria-label="Consequences of data disagreement">
+        <button class="chip" id="chip-1" data-chip="1" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Incidents take longer</span></button>
+        <button class="chip" id="chip-2" data-chip="2" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Automation breaks</span></button>
+        <button class="chip" id="chip-3" data-chip="3" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Audits get harder</span></button>
+        <button class="chip" id="chip-4" data-chip="4" type="button" aria-pressed="false"><img src="../img/campaign/warning-triangle--frame-alert-warning-triangle-exclamation-caution.svg" width="14" height="14" alt=""><span>Security gaps go unseen</span></button>
+      </div>
     </div>
   </section>
 
@@ -571,6 +761,19 @@
   <script>
     /* Register plugins once. */
     gsap.registerPlugin(ScrollTrigger);
+
+    /* ---------- Hero sticky offset ----------
+       The hero pins with `top: 0` when it fits the viewport. When it is taller (phones),
+       a negative top lets it scroll until its bottom edge is reached, then pin. */
+    const hero = document.getElementById('hero');
+    function updateHeroStick() {
+      const offset = Math.min(0, window.innerHeight - hero.offsetHeight);
+      document.documentElement.style.setProperty('--hero-stick', `${offset}px`);
+    }
+    updateHeroStick();
+    new ResizeObserver(updateHeroStick).observe(hero);
+    window.addEventListener('resize', updateHeroStick);
+    document.querySelector('.search').addEventListener('submit', (e) => e.preventDefault());
 
     /* ---------- Missing-asset placeholders: swap in the real file once it exists ---------- */
     document.querySelectorAll('.asset-ph[data-asset]').forEach((ph) => {
