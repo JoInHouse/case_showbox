@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!--
+  DevAI campaign page — "Get Your IT Data Truth Score"
+  Figma: DevAI_Site › GetYourDataTruthScore (node 9796:4992)
+  Plan:  Guide/DevAI Campaign Page — Implementation Plan for Claude Code.md
+
+  Effect: a dark, sticky hero plays a scripted search (GSAP timeline), then
+  alert chips highlight the tool tiles that cause each problem. Scrolling
+  slides a white content sheet over the receding hero; the docked header
+  flips to its light style as the sheet reaches it.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevAI — Get Your IT Data Truth Score</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:wght@400&family=Lato:wght@400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       Tokens — every value from the Figma frame, named by role.
+       ============================================================ */
+    :root {
+      /* Surfaces */
+      --color-bg-hero:            #040822;               /* Blue_Dark */
+      --color-bg-content:         #ffffff;
+      --color-bg-footer:          #040822;
+      --color-surface-overlay:    rgba(0, 0, 0, 0.2);    /* Overlays/Default — nav pill, search, chips */
+      --color-surface-tile:       rgba(4, 8, 34, 0.6);
+      --color-surface-tile-lift:  rgba(18, 32, 58, 0.92);
+      --color-surface-input:      #fafbff;               /* Neutrals/BG */
+      --color-surface-searchbox:  #ffffff;
+      --color-surface-card:       #ebeffb;               /* deliverable cards */
+      --color-surface-form:       #ffffff;
+      --color-surface-security:   #1a875b;
+
+      /* Text */
+      --color-text-hero-heading:  #c6cce2;
+      --color-text-hero-body:     #e2e2e2;
+      --color-text-on-dark:       #ffffff;
+      --color-text-tile-title:    #b4b4b4;
+      --color-text-label:         #797990;               /* neo-fg-3 */
+      --color-text-heading:       #191919;               /* NeualGrey-30 */
+      --color-text-body:          #040822;
+      --color-text-form:          #06001a;               /* Text/Dark */
+      --color-text-placeholder:   #b4b4b4;
+      --color-text-input:         #000000;               /* Labels/Primary */
+      --color-text-footer:        #707793;               /* Grey - 10 */
+      --color-text-on-accent:     #0d1336;
+      --color-text-required:      #ec2138;
+
+      /* Accents & status */
+      --color-accent-green:       #41ea97;               /* CTA pill */
+      --color-accent-green-hover: #2fdc87;
+      --color-accent-teal:        #32c7a9;               /* chip border, logo dots */
+      --color-accent-indigo:      #6271eb;               /* Brand/Indigo500 — search button */
+      --color-accent-indigo-down: #4c5bd4;
+      --color-alert:              #e67e27;               /* mismatching values */
+      --color-danger:             #d40000;               /* "Not found" */
+      --color-warning-icon:       #ff9500;               /* Colors/Orange */
+
+      /* Borders */
+      --color-border-nav:         #3c3f58;               /* Grey-30 */
+      --color-border-nav-divider: #4a4a4a;
+      --color-border-search:      #8e8e93;               /* Grays/Gray */
+      --color-border-searchbox:   #a5b3cd;               /* Border/Grey-NoActive */
+      --color-border-tile:        #3e4944;
+      --color-border-light:       #dfdbef;               /* Border/LightPurple */
+
+      /* Gradients */
+      --gradient-heading: linear-gradient(-90deg,
+        #41b7a9 24.576%, #4f83ab 39.831%, #353a7c 60.169%, #040822 75.424%);
+      --gradient-how-card: url("data:image/svg+xml;utf8,<svg viewBox='0 0 1360 456' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-5.0829e-7 66.247 -405.55 101.81 680 20.267)'><stop stop-color='rgba(65,183,169,0.2)' offset='0'/><stop stop-color='rgba(79,131,171,0.2)' offset='0.3'/><stop stop-color='rgba(53,58,124,0.2)' offset='0.7'/><stop stop-color='rgba(4,8,34,0.2)' offset='1'/></radialGradient></defs></svg>");
+      --gradient-footer-rule: linear-gradient(90deg,
+        rgba(58, 58, 58, 0) 0%, #b4b4b4 50%, rgba(58, 58, 58, 0) 100%);
+
+      /* Type */
+      --font-sans: 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-nav:  'Lato', 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Google Sans Code', ui-monospace, 'SF Mono', Menlo, monospace;
+      --text-display: clamp(40px, 3.2vw + 18px, 64px);
+      --text-h3:      28px;
+      --text-lead:    20px;
+      --text-title:   20px;
+      --text-nav:     18px;
+      --text-body:    16px;
+      --text-form:    14.4px;
+      --text-sm:      14px;
+      --text-xs:      12px;
+      --lh-display:   72px;
+      --lh-lead:      32px;
+
+      /* Radii */
+      --radius-nav:    16px;
+      --radius-search: 8px;
+      --radius-button: 4px;
+      --radius-tile:   8px;
+      --radius-card:   8px;
+      --radius-cta:    24px;
+      --radius-pill:   99px;
+      --radius-sheet:  16px;
+
+      /* Layout & spacing */
+      --page-max:        1440px;
+      --page-gutter:     40px;
+      --hero-max:        1200px;
+      --search-w:        640px;
+      --hero-copy-w:     880px;
+      --form-w:          480px;
+      --header-pad:      40px;
+      --nav-h:           54px;
+
+      /* Elevation */
+      --shadow-search: 0 1px 1px rgba(98, 113, 235, 0.35), 0 2px 3px rgba(98, 113, 235, 0.02);
+      --shadow-sheet-edge: 0 -24px 48px rgba(0, 0, 0, 0.35);
+
+      /* Motion: CSS durations multiply by --motion-scale (0 under reduced motion) */
+      --motion-scale: 1;
+      --dur-state:  calc(200ms * var(--motion-scale));
+      --dur-header: calc(250ms * var(--motion-scale));
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :root { --motion-scale: 0; }
+    }
+
+    /* ============================================================
+       Reset
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      font-family: var(--font-sans);
+      color: var(--color-text-body);
+      background: var(--color-bg-hero);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; color: inherit; }
+    button { background: none; border: 0; cursor: pointer; }
+    ul { list-style: none; }
+  </style>
+</head>
+<body>
+  <h1 class="visually-hidden">DevAI — Get Your IT Data Truth Score</h1>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+  <script>
+    /* Register plugins once. */
+    gsap.registerPlugin(ScrollTrigger);
+  </script>
+</body>
+</html>
