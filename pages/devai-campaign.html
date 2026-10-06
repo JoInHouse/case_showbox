@@ -913,6 +913,7 @@
       function replay() {
         if (!intro) return;
         intro.pause(0);
+        window.heroInteraction?.reset();
         preState();
         play();
       }
@@ -971,6 +972,113 @@
         onReady(fn) { listeners.ready.push(fn); if (phase === 'ready') fn(); },
         heroInner, heroBg, content, tiles, chips,
       };
+    })();
+
+    /* ============================================================
+       Phase 5: alert chips highlight the tiles that cause each problem
+       ============================================================ */
+    const HERO_MAP = { 1: [1, 2, 3], 2: [1, 2], 3: [1], 4: [4] };   // chip → tile indices
+
+    (() => {
+      const tiles = [...hero.querySelectorAll('.tile')];
+      const chips = [...hero.querySelectorAll('.chip')];
+      const canHover = matchMedia('(hover: hover)');
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+      let active = null;            // chip index the user (or the idle demo) selected
+      let preview = null;           // chip index under the pointer / keyboard focus
+      let activeFromIdle = false;
+      let idleCall = null;
+      let idleStopped = false;
+      let idleIndex = 0;
+      let idlePaused = false;
+
+      function render() {
+        const lit = active ? HERO_MAP[active] : [];
+        const previewed = preview && preview !== active ? HERO_MAP[preview] : [];
+        tiles.forEach((tile) => {
+          const n = Number(tile.dataset.tile);
+          const on = lit.includes(n);
+          tile.classList.toggle('is-highlighted', on);
+          tile.classList.toggle('is-previewed', previewed.includes(n));
+          tile.classList.toggle('is-dimmed', Boolean(active) && !on && !previewed.length);
+          if (on) tile.setAttribute('aria-describedby', `chip-${active}`);
+          else tile.removeAttribute('aria-describedby');
+        });
+        chips.forEach((chip) => {
+          const on = Number(chip.dataset.chip) === active;
+          chip.classList.toggle('is-active', on);
+          chip.setAttribute('aria-pressed', String(on));
+        });
+      }
+
+      /* Idle demo: cycle chips 1→4 until the visitor touches a chip. */
+      function idleStep() {
+        if (idleStopped) return;
+        idleIndex = (idleIndex % chips.length) + 1;
+        active = idleIndex;
+        activeFromIdle = true;
+        render();
+        idleCall = gsap.delayedCall(2.5, idleStep);
+        if (idlePaused) idleCall.pause();
+      }
+      function startIdle() {
+        if (!window.gsap || idleStopped || reduceMotion.matches) return;
+        idleCall?.kill();
+        idleIndex = 0;
+        idleCall = gsap.delayedCall(2, idleStep);
+        if (idlePaused) idleCall.pause();
+      }
+      function stopIdle() {
+        if (idleStopped) return;
+        idleStopped = true;
+        idleCall?.kill();
+        idleCall = null;
+        if (activeFromIdle) { active = null; activeFromIdle = false; }   // hand control back clean
+      }
+
+      chips.forEach((chip) => {
+        const n = Number(chip.dataset.chip);
+        chip.addEventListener('click', () => {
+          stopIdle();
+          active = active === n ? null : n;
+          activeFromIdle = false;
+          render();
+        });
+        chip.addEventListener('pointerenter', (e) => {
+          if (e.pointerType !== 'mouse' || !canHover.matches) return;
+          stopIdle();
+          if (chip.disabled) return;
+          preview = n;
+          render();
+        });
+        chip.addEventListener('pointerleave', (e) => {
+          if (e.pointerType !== 'mouse' || preview !== n) return;
+          preview = null;
+          render();
+        });
+        chip.addEventListener('focus', () => {
+          stopIdle();
+          if (!chip.matches(':focus-visible')) return;  // keyboard focus previews; mouse focus doesn't
+          preview = n;
+          render();
+        });
+        chip.addEventListener('blur', () => {
+          if (preview !== n) return;
+          preview = null;
+          render();
+        });
+      });
+
+      window.heroInteraction = {
+        pauseIdle() { idlePaused = true; idleCall?.pause(); },
+        resumeIdle() { idlePaused = false; idleCall?.resume(); },
+        reset() {
+          idleCall?.kill(); idleCall = null; idleStopped = false;
+          active = null; preview = null; activeFromIdle = false; render();
+        },
+      };
+
+      if (heroCtl) heroCtl.onReady(startIdle);
     })();
 
     /* ---------- Missing-asset placeholders: swap in the real file once it exists ---------- */
