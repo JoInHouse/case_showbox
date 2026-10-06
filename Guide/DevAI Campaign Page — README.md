@@ -83,14 +83,18 @@ logs a 404 for each one, and that is expected.
 5. **Copy fixes the owner approved:** "disagree," (was "disagrees,"), "get?"
    (was "get ?"), and the phone placeholder `+1 555 000 0000`. The headline's
    trailing comma is kept as in Figma.
-6. **Additions not in Figma:**
-   - a frosted header band: white on the light sheet, dark on phones where the
-     tall hero scrolls under the header;
+6. **Solid dark header instead of the light-style flip (owner's decision).** The
+   header has a permanent `#040822` background, so the logo and nav always sit on
+   dark blue and the white sheet slides under the header's bottom edge. The hero
+   recede ends, and the hero counts as covered, when the sheet reaches that edge.
+   This replaces the guide's Phase 6.4 `.is-on-light` flip. Anchor links clear the
+   bar via `scroll-margin-top: calc(var(--header-h) + 16px)`.
+7. **Additions not in Figma:**
    - a hamburger menu below 900 px;
    - the sign-up success message: "You're on the list! Thanks, {name}. We'll
      contact you at {email} to schedule your assessment." This copy is a
      placeholder for the owner to confirm.
-7. **Tall heroes (phones, short laptops).** The hero can't fit in 100vh, so it
+8. **Tall heroes (phones, short laptops).** The hero can't fit in 100vh, so it
    gets a negative sticky `top`: it scrolls to its bottom edge, then pins and is
    covered.
 
@@ -100,14 +104,13 @@ logs a 404 for each one, and that is expected.
   661/661, closing 220/220 and footer 140/139 px. 1024 and 390 reflow without
   horizontal scroll.
 - **Browsers:** Chrome and WebKit (desktop and iPhone 13 emulation) pass the
-  same behaviour checks: intro, chip mapping, recede, header flip, and no
+  same behaviour checks: intro, chip mapping, recede, and no
   horizontal scroll. Firefox could not be launched in the build sandbox and
   still needs a manual pass, as do Edge and a real iOS device.
 - **Keyboard:** tab order is header → search → chips → form → CTA → footer.
   Enter and Space toggle chips; keyboard focus previews a chip's tiles.
 - **Reduced motion:** the final state shows immediately, chips are enabled, and
-  there is no idle loop and no recede. The header still flips, with 0 ms
-  transitions.
+  there is no idle loop and no recede.
 - **Lighthouse (local server):**
   - desktop: Performance 95, Accessibility 100, SEO 100;
   - mobile: Performance 100 (3 runs), SEO 100, CLS 0.001.

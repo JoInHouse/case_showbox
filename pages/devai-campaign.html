@@ -184,7 +184,9 @@
        Page regions: stacking contract
        header (fixed, z 30) › content + footer (relative, z 10) › hero (sticky, z 0)
        ============================================================ */
-    .site-header { position: fixed; inset: 0 0 auto; z-index: 30; pointer-events: none; }
+    /* Solid band in the hero colour: the header always sits on dark blue, and the white
+       sheet slides underneath its bottom edge instead of behind a transparent bar. */
+    .site-header { position: fixed; inset: 0 0 auto; z-index: 30; background: var(--color-bg-hero); }
     .hero {
       position: sticky; top: var(--hero-stick, 0px); z-index: 0;
       min-height: 100vh; min-height: 100svh;
@@ -204,11 +206,9 @@
     .site-header__inner {
       display: flex; align-items: center; justify-content: space-between;
       max-width: var(--page-max); margin-inline: auto; padding: var(--header-pad);
-      pointer-events: none;           /* the empty band never blocks the page */
     }
-    .site-header__inner > * { pointer-events: auto; }
     .site-header__logo { display: block; }
-    .site-header__logo img { width: 78.34px; height: 26.75px; transition: filter var(--dur-header) ease; }
+    .site-header__logo img { width: 78.34px; height: 26.75px; }
 
     .site-nav ul {
       display: flex; align-items: center; gap: 40px;
@@ -431,7 +431,7 @@
       flex: none; width: var(--form-w);
       background: var(--color-surface-form);
       border: 1px solid var(--color-border-light); border-radius: var(--radius-card);
-      padding: 20px; scroll-margin-top: 120px;
+      padding: 20px; scroll-margin-top: calc(var(--header-h) + 16px);   /* clear the solid header */
     }
     .signup__form { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     .signup__title {
@@ -525,33 +525,6 @@
       .site-footer__row { padding-block: 32px; }
     }
 
-    /* Header on the light sheet (toggled by ScrollTrigger in Phase 6).
-       A frosted band fades in behind it so the logo stays legible over content. */
-    .site-header::before {
-      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
-      background: rgba(255, 255, 255, 0.78);
-      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-      -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent);
-      transition: opacity var(--dur-header) ease;
-    }
-    .site-header.is-on-light::before { opacity: 1; }
-    /* Phones: the tall hero scrolls under the header, so give it a dark band there too. */
-    .site-header.is-scrolled:not(.is-on-light)::before { opacity: 1; background: rgba(4, 8, 34, 0.9); }
-    .site-header__inner { position: relative; }
-    /* The logo file is light-on-dark; on the light sheet, invert its lightness while
-       hue-rotate keeps the teal dots teal (#DEDEDE letters become #212121). */
-    .site-header.is-on-light .site-header__logo img { filter: invert(1) hue-rotate(180deg); }
-    .site-header.is-on-light .site-nav ul,
-    .site-header.is-on-light .site-header__toggle {
-      background-color: rgba(4, 8, 34, 0.06); border-color: rgba(4, 8, 34, 0.14);
-    }
-    .site-header.is-on-light .site-nav a { color: var(--color-text-body); }
-    .site-header.is-on-light .site-nav a:hover { color: #178a73; }
-    .site-header.is-on-light .site-nav__login { border-color: rgba(4, 8, 34, 0.2); }
-    .site-header.is-on-light .site-header__toggle[aria-expanded="false"] .site-header__bars,
-    .site-header.is-on-light .site-header__bars::before,
-    .site-header.is-on-light .site-header__bars::after { background-color: var(--color-text-body); }
-
     @media (max-width: 899px) {
       :root { --header-pad: 16px 20px; --page-gutter: 20px; }
       .site-header__toggle { display: inline-flex; }
@@ -570,9 +543,6 @@
       }
       .site-nav a { padding: 12px; justify-content: space-between; }
       .site-nav__login { border-left: 0; border-top: 1px solid var(--color-border-nav-divider); padding: 0; margin: 4px 0 0; }
-    }
-    @media (max-width: 899px) {
-      .site-header.is-on-light .site-nav ul { background-color: rgba(255, 255, 255, 0.97); border-color: var(--color-border-light); }
     }
   </style>
 </head>
@@ -826,6 +796,7 @@
     const heroCtl = hasGsap && (() => {
       const root = document.documentElement;
       const content = document.getElementById('content');
+      const header = document.getElementById('site-header');
       const heroInner = hero.querySelector('.hero__inner');
       const heroBg = hero.querySelector('.hero__bg');
       const input = hero.querySelector('.search__input');
@@ -994,7 +965,7 @@
           scrollTrigger: {
             trigger: content,
             start: 'top bottom',
-            end: 'top top',
+            end: () => `top ${header.offsetHeight}px`,   // hero is gone once the sheet meets the header
             scrub: 0.4,
             onToggle: (self) => { heroInner.style.willChange = self.isActive ? 'transform, opacity' : ''; },
             onLeave: () => setCovered(true),
@@ -1030,20 +1001,8 @@
       };
     })();
 
-    /* ---------- Phase 6: header flips to its light style as the sheet reaches it ---------- */
+    /* ---------- ScrollTrigger housekeeping ---------- */
     if (hasGsap) {
-      const header = document.getElementById('site-header');
-      const logo = header.querySelector('.site-header__logo');
-      ScrollTrigger.create({
-        trigger: '#content',
-        start: () => `top ${logo.getBoundingClientRect().top + logo.offsetHeight / 2}px`,
-        end: 'max',
-        toggleClass: { targets: header, className: 'is-on-light' },
-      });
-      ScrollTrigger.create({
-        start: 8, end: 'max',
-        toggleClass: { targets: header, className: 'is-scrolled' },
-      });
       ScrollTrigger.addEventListener('refreshInit', updateHeroStick);
       document.fonts.ready.then(() => ScrollTrigger.refresh());
     }
