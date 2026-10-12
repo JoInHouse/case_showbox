@@ -1,281 +1,156 @@
-# SolutionDiagram — Animation Handoff
+# SolutionDiagram — Handoff
 
-Handoff brief for animating `SolutionDiagram.layered.svg` for the DevAI solution-introduction page.
+Working reference for editing or extending the DevAI "solution hub" diagram and its animation. Last synced with the files on 2026-10-12 (19 tool icons).
 
-## What this artwork is
+| File | Role |
+|---|---|
+| `img/SolutionDiagram.layered.svg` | The artwork ("main stage"). Layered, with ids/classes for animation. |
+| `pages/SolutionDiagram.html` | Standalone page: fetches the SVG, inlines it, runs the GSAP animation. |
+| `img/devai-mascot.png` | Centre mascot (external raster, referenced by the SVG's pattern fill). |
+| `img/*_Disc.svg`, `*_62x62.svg` | Source logo artwork for tools that were added later (Meraki, Armis, CrowdStrike, Dell, HPE, Oracle ORDS). |
+| `img/SolutionDiagram_StaticLayerReorganized.svg` | Flat Figma-style reference used by `scripts/update_layered_svg.py`. |
+| `scripts/update_layered_svg.py` | One-off rebuild script. **Do not re-run** (see Gotchas). |
 
-A circular "solution hub" diagram. A central mascot (DevAI bot, embedded as raster pattern fill) sits inside a glowing teal sphere, surrounded by 14 third-party tool logos (Cisco AnyConnect, Webex, Meraki, VMware, Jira, Zscaler, Microsoft Word, Surface, etc.) arranged on and around a circular orbit ring. Dashed lines (spokes) connect each logo to the center, representing DevAI mediating between the user and their tool stack.
+## Geometry
 
-The artwork was exported from Figma as a single flat SVG. This layered version preserves every original element and only adds semantic `<g id="...">` grouping plus `id`/`class`/`data-*` attributes on animatable items. **Rendering is pixel-identical to the source** (verified by sha256 of rasterised output).
-
-## File: `SolutionDiagram.layered.svg`
-
-- Viewbox: `0 0 763 737`
-- Visual centre: approximately `(386.5, 384.5)` — use this for any transform-origin involving the orbit
-- Orbit ring radius: `294.5`
-- All gradients, filters, masks, patterns, and the embedded raster mascot live in the bottom `<defs>` block, untouched.
+- Canvas: `width=841 height=820 viewBox="0 0 841 820"`.
+- Orbit centre: **(420.5, 427.93)**. Orbit ring radius: **294.5**.
+- Angles used everywhere (twinkle sync, comet): **0° = 3 o'clock, increasing clockwise** (SVG y-down).
+- Icon discs are 62×62 (a few are 60×60), centred on the **outer end of a spoke**, ~287–288 from the centre.
+- Neighbouring seats are 15° apart (~77px chord), so adjacent 62px discs always leave ~15px. Labels are what collide, not icons.
 
 ## Layer structure (back → front)
 
 ```
 <svg>
-  <mask id="mask0_7540_2644">                ← inline mask def used by Layer 1
-  <g id="layer-1-ambient">                   ← ANIMATED (gradient breathe)
-    <g id="ambient-glow">                    ← target this for breathe
-  <g id="layer-2-arcs-and-text">             ← STATIC
-    <g id="arcs">
-    <g id="curved-text">
-  <g id="layer-3-orbit">
-    <g id="orbit-halo">                      ← STATIC (wide blurred halo)
-    <g id="orbit-ring-and-dots">             ← conceptual wrapper
-      <g id="orbit-track">                   ← ANIMATED (rotate continuously)
-        <circle id="orbit-ring" .../>
-      <g id="orbit-dots">                    ← STATIC position, but each dot twinkles
-        24 × <path class="orbit-dot" data-dot-index="1..24">
-  <g id="layer-4-spokes">                    ← ANIMATED (hero)
-    25 × <path id="spoke-01..25" class="spoke">
-  <g id="layer-5-icons-and-center">          ← STATIC (with optional entrance)
-    14 × <g id="icon-NN-position">
-    <g id="icon-labels">
-    <g id="center-logo">
-  <defs>
+  <defs>                             gradients, filters, mascot pattern (top of file)
+  layer-1-ambient
+    ambient-glow                     ANIMATED: opacity breathe (CSS). At runtime moved OUT of this <svg> into #glow-layer (see below)
+  layer-2-arcs-and-text
+    arcs, curved-text                STATIC
+  layer-3-orbit
+    orbit-halo                       STATIC
+    orbit-ring-and-dots
+      orbit-track > #orbit-ring      stroke hidden by page CSS; comet is appended into #orbit-track
+      orbit-dots > 24 × .orbit-dot   data-dot-index 1..24; twinkle when comet passes
+  layer-4-spokes                     ANIMATED: 24 × path.spoke  #spoke-01..24
+  layer-5-icons-and-center
+    icon-<seat>-<brand> × 19         ANIMATED: staggered scale-in entrance (ordered by seat)
+    icon-labels                      STATIC (outlined paths + <text>)
+    center-logo                      in the file: a pattern-filled <rect>. At runtime replaced by an <img id="center-logo"> (see below)
 ```
 
-## Animation plan per layer
+**Runtime layer split (Safari performance).** Safari has no compositor layers for SVG children, so anything that repaints inside the main `<svg>` re-runs the blur underneath it. On load, `splitLayers()` in the page lifts two things out of the SVG into composited layers inside `#svg-container`, back → front: `#glow-layer` (a div holding a second `<svg>` with `#ambient-glow`; its filter and gradients still live in the main `<defs>`), the main `<svg>`, then `<img id="center-logo">` (sized and placed in % from the original `<rect>`'s x/y/width). The SVG file itself is unchanged. Measured in WebKit: ~44% less CPU than the old in-SVG version.
 
-### Layer 1 — Ambient breathe (subtle)
+## Seats: dots, spokes, icons
 
-Two blurred gradient rectangles inside `#ambient-glow` create the teal sphere glow. Animate the opacity of the group on a slow sine loop:
+24 seats, one per orbit dot. Every seat already has a spoke, whether or not an icon sits on it — so **adding an icon to a free seat needs no new spoke**.
 
-```css
-#ambient-glow {
-  animation: breathe 6s ease-in-out infinite;
-  transform-origin: 386.5px 384.5px;
-}
-@keyframes breathe {
-  0%, 100% { opacity: 0.85; }
-  50%      { opacity: 1.00; }
-}
-```
+Dot `n` is at angle `(105 − 15·n) mod 360`. Dot centre = the dot path's second-point x/y (the `M` point is its right edge, `cx = M.x − 6.37`).
 
-Optionally add a hair of scale (1.00 ↔ 1.02) for extra life — but keep it tiny; the gradient is large and even small scale pumps feel exaggerated.
+| Dot | Angle | Occupant | Icon id | Spoke (start pt) | Label |
+|---|---|---|---|---|---|
+| 1 | 90° (bottom) | Quantea | `icon-01-quantea` | spoke-20 | below |
+| 2 | 75° | **free** | | spoke-23 | |
+| 3 | 60° | Zabbix | `icon-03-zabbix` | spoke-03 | below |
+| 4 | 45° | Oracle ORDS | `icon-04-oracle-ords` | spoke-07 | right (lowered) |
+| 5 | 30° | Dynatrace | `icon-05-dynatrace` | spoke-15 | right |
+| 6 | 15° | Armis | `icon-06-armis` | spoke-11 | right |
+| 7 | 0° | Jira | `icon-07-jira` | spoke-19 | right |
+| 8 | 345° | CrowdStrike | `icon-08-crowdstrike` | spoke-22 | right |
+| 9 | 330° | Infoblox | `icon-09-infoblox` | spoke-02 | right |
+| 10 | 315° | **free** | | spoke-06 | |
+| 11 | 300° | ServiceNow | `icon-11-servicenow` | spoke-14 | above |
+| 12 | 285° | **free** | | spoke-10 | |
+| 13 | 270° (top) | VMware | `icon-13-vmware` | spoke-18 | above |
+| 14 | 255° | Nautobot | `icon-14-nautobot` | spoke-21 | above |
+| 15 | 240° | Netbox | `icon-15-netbox` | spoke-01 | above |
+| 16 | 225° | HPE OneView | `icon-16-hpe-oneview` | spoke-05 | left |
+| 17 | 210° | Dell OME | `icon-17-dell-ome` | spoke-13 | left |
+| 18 | 195° | Cisco Intersight | `icon-18-cisco-intersight` | spoke-09 | left |
+| 19 | 180° | Cisco Catalyst Center | `icon-19-cisco-catalyst-center` | spoke-17 | left (2 lines) |
+| 20 | 165° | Cisco SD-WAN | `icon-20-cisco-sdwan` | spoke-24 | below |
+| 21 | 150° | Meraki | `icon-21-meraki` | spoke-04 | below |
+| 22 | 135° | **free** | | spoke-08 | |
+| 23 | 120° | Splunk | `icon-23-splunk` | spoke-16 | below |
+| 24 | 105° | **free** | | spoke-12 | |
 
-### Layer 2 — Light arcs & curved text
+**Id scheme:** `icon-<seat>-<brand>`, where `<seat>` is the two-digit dot index from the table (so numbers have gaps at free seats), and each group carries `data-seat="<n>"`. Groups sit in the SVG in seat order. The old positional ids (`icon-01-top`, `icon-13-top-center`, …) and `data-position` are gone; nothing in the page depended on them beyond the `icon-` prefix. Spokes are still numbered independently of seats (`spoke-06` ↔ dot 10, etc.) — use the table's Spoke column.
 
-**Fully static.** No animation. The arcs and curved decorative text are part of the brand composition; leave them alone.
+**Free seats: dots 2, 10, 12, 22, 24.** Watch label room before using one:
+- Dot 22 (135°): a below-label collides with Splunk's disc (x≈245). Use a left label or two lines.
+- Dot 10 (315°): right label fits (HPE OneView used to sit there with one at x=663).
+- Dot 12 (285°): label above sits between the VMware label (y≈92–102) and ServiceNow's (y≈128–139); keep it short.
+- Dot 24 (105°): below label fits (Dell OME used to sit there with one at y=757), but it sits close to the Quantea label.
 
-### Layer 3 — Orbit ring + twinkling dots
+**Seat moves (2026-10-01).** VMware, Nautobot and Netbox each moved one seat clockwise (14→13, 15→14, 16→15), and HPE OneView (10→16) and Dell OME (24→17) took the two seats this freed next to Cisco Intersight. The three moved groups whose shapes use absolute coordinates are wrapped in an inner `<g transform="translate(dx dy)">` (VMware `72.461 −7`, Nautobot `70 −29`, Netbox `59 −46`), and their outlined-path labels carry the same `transform`. HPE OneView and Dell OME just had their inner `translate` changed. Their `<text>` labels are now left labels (`text-anchor="end"`), because a label above the disc would run into the neighbouring disc. Dell OME's label sits at `y=285` (4px above the usual centre line), and Cisco Intersight's outlined label is now a left label: its path carries `transform="translate(-30 39.5)"`, which centres it vertically between the Dell OME and Cisco Catalyst Center labels (≈350) and right-aligns it to x≈102 like Catalyst Center (the logo stays on its spoke), so the Dell OME and Cisco Intersight labels have room between them.
 
-The 1px orbit ring (`#orbit-ring`) carries a vertical linear gradient (`paint9_linear_7540_2644`) running from bright teal `#3CF9D1` at the bottom to transparent at the top, with the brightest "hot spot" at the bottom. The element already has a baked `transform="rotate(90 386.5 384.5)"`, so the hot spot visually starts at the **3 o'clock (right) position**.
+**Oracle ORDS (2026-10-12)** took dot 4 (45°), between Zabbix and Dynatrace. Its logo is translated to `(592.461 600.891)` (spoke-07's start point minus 31). A standard right label (baseline ≈636) would sit right under the Dynatrace label (y≈611–622), so it is a right label lowered to `x=663 y=650`, below the Dynatrace label. To give the two labels room, the Dynatrace outlined-path label was moved from below its disc to its right: the path carries `transform="translate(38 -38)"` (now x≈708–770, y≈574–584, slightly below the disc's centre line). The logo has no internal ids.
 
-**Verified behaviour:** SVG `userSpaceOnUse` gradients rotate with the element's transform in all major renderers (Chrome, Safari, Firefox, cairo). So rotating `#orbit-ring` rotates the hot spot with it — exactly the effect we want.
+## Adding a new tool logo (recipe)
 
-**Ring rotation:**
+1. Pick a free seat from the table. Take the spoke's start point (its `M x y`) as the icon **centre**.
+2. Insert a group in `layer-5-icons-and-center`, keeping seat order (before `<g id="icon-labels">` if it is the highest seat):
+   ```svg
+   <g id="icon-<seat>-<brand>" data-seat="<seat>">
+     <!-- seat <seat> — <Brand> (spoke-XX) -->
+     <g transform="translate(CX-31 CY-31)">
+       …contents of the logo SVG (without the outer <svg> tag)…
+     </g>
+   </g>
+   ```
+   Keep the id prefix `icon-` — the page's entrance tween selects `[id^="icon-"]:not(#icon-labels)`, and the count also feeds the mascot fade-in delay.
+3. Add the label inside `#icon-labels` as `<text>` (this is the current convention, matching Meraki / CrowdStrike / Armis / HPE / Dell):
+   ```svg
+   <text x="…" y="…" text-anchor="…" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#A5B3CD">Name</text>
+   ```
+   Placement rules derived from existing labels (S = disc centre, disc half-width 31):
+   - **Right:** `text-anchor="start"`, `x ≈ S.x + 31 + 8.5`, `y ≈ S.y + 4.5`.
+   - **Below:** `text-anchor="middle"`, `x = S.x`, `y ≈ S.y + 31 + 19` (Meraki is +18.6; Splunk +22).
+   - **Above:** centred, baseline ≈ 10px above the disc top.
+   - **Left:** right-aligned to `x ≈ S.x − 31 − 8`.
+4. Make every `id` inside the pasted logo unique — clipPaths, masks and gradients collide silently. Existing ones in use: `clip0_9561_3561`, `clip1_9561_3561` (Dell), `clip0_9561_3566`, `clip1_9561_3566` (HPE), `mask0_8225_5850` (icon-20), `paint0_radial_8905_3493` (icon-18), plus the `*_8225_5850` gradients in `<defs>`.
+5. Do not add a spoke or dot; they already exist. Do not touch dots under an icon — the twinkle still fires there and reads as the ring passing under the disc.
 
-```js
-import { gsap } from 'gsap';
+## Animation as implemented (`pages/SolutionDiagram.html`)
 
-gsap.to('#orbit-ring', {
-  rotation: '+=360',
-  transformOrigin: '386.5px 384.5px',
-  duration: 20,             // 20s per revolution; tune to taste
-  ease: 'none',
-  repeat: -1,
-});
-```
+Loading: `fetch('../img/SolutionDiagram.layered.svg')` → inline into `#svg-container` (needs a local server; `file://` fetch fails). `href="devai-mascot.png"` is rewritten to `../img/devai-mascot.png`. Starts on an `IntersectionObserver` (threshold 0.2). `prefers-reduced-motion` → only a simple icon fade, no loops.
 
-Note: the static `transform="rotate(90 ...)"` attribute on the `<circle>` will be overwritten when GSAP sets its own transform. To preserve the initial rotation, either strip the attribute and set initial rotation via GSAP, or use a CSS-based approach:
+| Effect | How |
+|---|---|
+| Ambient glow | CSS `breathe` 4s, opacity 0.55↔1 on the `#glow-layer` **div** (`will-change: opacity`), not on the SVG group. Opacity only — scaling a blurred group makes Safari re-rasterise every frame. |
+| Orbit ring | Stroke set to `none`. Instead a **comet** (near-white head + glow circle + 28 trail circles, r 4→1.6, opacity fading) is appended to `#orbit-track` and driven by one tween, 8s per lap, positions set via `setAttribute`. No SVG blur filter (Safari cost). |
+| Dot twinkle | Each dot's angle precomputed from `getBBox()`. On each update the nearest dot within 7° of the comet fires once (scale 1.5, brightness, cyan drop-shadow); resets when >20° away. Enabled after 2s. Uses the SVG `transform` attribute, not CSS (Safari). |
+| Icon entrance | `gsap.set` scale 0 / opacity 0, then scale-in with `back.out(1.7)`, 0.06s stagger from random, 0.3s delay. Excludes `#icon-labels`. |
+| Icon pulse | When the comet comes within 7° of an icon's seat, that icon scales to 1.12× and back (`pulseIcon()`: 0.12s, `yoyo`, `repeat: 1`, `sine.inOut`, `overwrite: 'auto'`). Icon angles are precomputed from each `icon-*` group's `getBBox()` centre (`pulseIcons`), checked in the same `onUpdate` as the twinkle, and re-armed when the comet is >20° away. Active after 2s, once the entrance has finished. Transform only — no filter. Labels don't scale. Measured cost in WebKit: ~+2 points of CPU (within run-to-run noise). |
+| Spoke highlight | Each icon pulse also flashes that icon's spoke. At start, every `.spoke` gets a hidden copy `#spoke-NN-hl` (class `spoke-hl`, stroke-width 3, same `0 8` dots) inserted just above it, with its own `userSpaceOnUse` gradient `#spoke-NN-hl-grad` (white-cyan at the icon end, fading out by 90% of the way to the centre). Icons are paired with the spoke whose outer end is closest in angle (within 7.5°), so free seats never flash. `pulseIcon()` tweens the copy's `opacity` **attribute** 0→1 in 0.15s, then back to 0 over 0.9s. `startSpokes()` keeps the copies' dash offset in step with their spokes, but only writes it while a copy is visible. Opacity only, no filter (Safari). |
+| Centre mascot | Fades in after the last icon (`0.3 + count·0.06 + 0.5`s), then wanders ±20 viewBox units on random 2–4s sine tweens. It's an `<img>` moved with GSAP `xPercent`/`yPercent` (composited translate), so it scales on resize and never repaints the SVG. |
+| Spokes | Start at 1.5s. **One** tween (0→40 over 2.2s, repeat) sets `strokeDashoffset` on all spokes, each with a staggered offset. CSS `.spoke { stroke-width: 2; stroke-dasharray: 0 8 }` overrides the SVG attributes (`1.5`, `0 4`). Negative offset ⇒ dots flow icon → centre because every spoke path is drawn icon → centre. |
 
-```js
-gsap.set('#orbit-ring', { rotation: 90, transformOrigin: '386.5px 384.5px' });
-gsap.to('#orbit-ring', { rotation: '+=360', duration: 20, ease: 'none', repeat: -1 });
-```
+Labels (`#icon-labels`) are **not** animated, so they are visible before their icons scale in. This is existing behaviour.
 
-**Dot twinkles synced to the hot spot:**
+Constants that must match the SVG if the artwork moves: `CENTER = {420.5, 427.93}` and `RADIUS = 294.5` in `startAnimations()`.
 
-The dots are at fixed positions around the ring. Calculate each dot's angle from the centre once, then on every animation frame, check which dot is closest to the current hot-spot angle and trigger its twinkle.
+## Gotchas
 
-```js
-const CENTER = { x: 386.5, y: 384.5 };
-const HOT_SPOT_BASE_ANGLE = 90;   // bottom of gradient = +Y direction in SVG coords
-                                  //   = +90° in standard math, but SVG y is inverted
-                                  // After the baked rotate(90), hot spot is at the right (0°)
-                                  // → adjust the offset empirically by 90° if needed.
+- **`scripts/update_layered_svg.py` is stale.** It rebuilds the layered SVG from fixed line numbers in the reference file and knows nothing about icons 15–18, the `<text>` labels, or the external mascot. Running it would drop those additions. Edit the layered SVG directly.
+- **`update_layered_svg.py` also mentions the old positional ids in its comments.** Ignore them.
+- **Reference SVG is behind.** `SolutionDiagram_StaticLayerReorganized.svg` doesn't contain the later additions either.
+- **GSAP + SVG transforms.** Entrance scaling sets a `transform` on each `icon-NN` group (origin at bbox centre). Keep the logo's own `translate` on an **inner** group, as in the recipe, or GSAP will overwrite it.
+- **Safari:** avoid CSS transforms on SVG children, blur filters in per-frame paths, and scaling `#ambient-glow`. Keep blurred art and large moving rasters (the mascot) **outside** the main `<svg>` as their own elements. `splitLayers()` preserves the ids `ambient-glow` and `center-logo`, but `center-logo` is an `<img>` (no `<rect>`/pattern) while the page runs.
+- **Text labels use Inter** if available, otherwise fall back; older outlined-path labels won't shift with fonts. Long names may need two lines or a different side.
 
-// Build a sorted list of dots with their fixed angle
-const dots = Array.from(document.querySelectorAll('.orbit-dot')).map(el => {
-  const bbox = el.getBBox();
-  const cx = bbox.x + bbox.width / 2;
-  const cy = bbox.y + bbox.height / 2;
-  let angle = Math.atan2(cy - CENTER.y, cx - CENTER.x) * 180 / Math.PI;
-  if (angle < 0) angle += 360;
-  return { el, angle };
-});
+## Verification checklist
 
-const ringEl = document.querySelector('#orbit-ring');
-let lastTriggered = -1;
-
-gsap.ticker.add(() => {
-  // Get current rotation of the ring
-  const ringRotation = (gsap.getProperty(ringEl, 'rotation') + HOT_SPOT_BASE_ANGLE) % 360;
-  const hotSpotAngle = (ringRotation + 360) % 360;
-  // Find the nearest dot
-  let nearest = -1, nearestDist = 999;
-  dots.forEach((d, i) => {
-    let diff = Math.abs(d.angle - hotSpotAngle);
-    diff = Math.min(diff, 360 - diff);
-    if (diff < nearestDist) { nearestDist = diff; nearest = i; }
-  });
-  // Trigger twinkle once per dot crossing (when hot spot is within ~7° of the dot)
-  if (nearestDist < 7 && nearest !== lastTriggered) {
-    twinkle(dots[nearest].el);
-    lastTriggered = nearest;
-  }
-});
-
-function twinkle(el) {
-  gsap.fromTo(el,
-    { fillOpacity: 0.5, scale: 1 },
-    { fillOpacity: 1.0, scale: 1.4, duration: 0.25, yoyo: true, repeat: 1,
-      transformOrigin: '50% 50%', ease: 'sine.inOut' }
-  );
-}
-```
-
-**Tuning notes:**
-- The 7° threshold and 20s ring duration are starting points. Watch the result: if multiple dots twinkle simultaneously, narrow the threshold; if there are visible gaps, widen it.
-- The `HOT_SPOT_BASE_ANGLE` offset depends on which end of the gradient you treat as "hot" and the initial `rotate(90)`. Tune empirically — the value in this snippet is a placeholder.
-- For a softer effect, twinkle a small window of 3 dots (the nearest plus its two neighbours) with decaying intensity.
-
-### Layer 4 — Spokes (hero animation, INWARD flow)
-
-Each spoke is a `<path>` with `stroke-dasharray="2 2"`. Animate `stroke-dashoffset` in the **negative** direction so the dash pattern flows from icon toward centre.
-
-```js
-const spokes = document.querySelectorAll('.spoke');
-
-spokes.forEach((spoke, i) => {
-  // Direction is uniform: negative offset → dashes appear to travel
-  // along the path's parametric direction. Since each spoke is drawn
-  // from icon → centre (M starts at icon, ends at centre), a negative
-  // dashoffset makes the dashes flow toward the centre.
-  gsap.to(spoke, {
-    strokeDashoffset: '-=40',     // arbitrary distance; the loop hides this
-    duration: 2 + (i % 5) * 0.2,  // mild speed variation so they're not in lockstep
-    repeat: -1,
-    ease: 'none',
-    delay: i * 0.05,              // stagger
-  });
-});
-```
-
-**Important — verify path direction:** Each spoke's `d` attribute starts with `M <icon-x> <icon-y>` and ends near `(386, 385)`. The first `M` should be at the icon (outer) end; sample a few to confirm. If any spoke is drawn centre → icon instead, its dashes will appear to flow outward; flip the sign of `strokeDashoffset` for that one, or pre-process to make all paths run icon → centre.
-
-**Optional improvement: comet trail effect.** For more visual punch, replace the static `stroke-dasharray="2 2"` with a longer asymmetric pattern (e.g. `dasharray="8 24"`) so each "dash" reads as a particle. Combine with a fading stroke gradient along the path for a true comet feel — borrows from the river-flow project's stroke-dashoffset approach.
-
-### Layer 5 — 14 tool logos + center mascot
-
-**Static** after entrance. There are 14 distinct icon groups:
-
-| ID | Position (x,y of base) | Visual |
-|---|---|---|
-| `icon-01-top` | 281, 75 | White circle — Microsoft Word document with green check |
-| `icon-02-left` | 77, 279 | Dark — Microsoft Surface device illustration |
-| `icon-03-bottom-left-center` | 280, 632 | Dark teal — Cisco Webex bow-tie/microphone |
-| `icon-04-top-right` | 501, 102 | Dark — Cisco AnyConnect green shield |
-| `icon-05-bottom-right` | 559, 557 | Blue square — Microsoft Teams "people" silhouette |
-| `icon-06-right-lower` | 605, 498 | Dark — Cisco Meraki radio/signal mark |
-| `icon-07-left-lower` | 75, 427 | Gradient — VMware-like cube/symbol |
-| `icon-08-right-upper` | 605, 210 | Dark — Cisco arrow-cluster (Catalyst/Nexus mark) |
-| `icon-09-right` | 644, 354 | Blue — Microsoft 4-window logo |
-| `icon-10-bottom-left` | 212, 605 (circle) | Dark — Cisco Webex with arc/dots |
-| `icon-11-bottom-center` | 355, 643 | Gradient — Cisco Webex (alt mark) |
-| `icon-12-top-left` | 150, 149 | Red — ZAB / JAB-style text mark |
-| `icon-13-bottom-right-inner` | 430, 634 | Gradient — Microsoft logo squares |
-| `icon-14-bottom-left-inner` | 150, 558 | Dark — secondary logo |
-
-Some IDs are best-guess from visual inspection. **If you can confirm the actual brand each icon represents from the Figma source, rename the IDs accordingly** (e.g. `icon-microsoft-word`, `icon-cisco-anyconnect`) — semantic names will help future maintainers far more than positional ones.
-
-**Entrance animation:**
-
-```js
-gsap.set('[id^="icon-"]', { scale: 0, opacity: 0, transformOrigin: '50% 50%' });
-gsap.to('[id^="icon-"]', {
-  scale: 1, opacity: 1,
-  duration: 0.5,
-  ease: 'back.out(1.7)',
-  stagger: { each: 0.06, from: 'random' },   // random stagger feels alive
-  delay: 0.3,
-});
-```
-
-Trigger on `IntersectionObserver` so it plays when the diagram scrolls into view, not on initial page load.
-
-The center mascot (`#center-logo`) can either fade in last (after icons, ~0.3s after the final icon) or remain static. A very gentle continuous scale breathe (0.98 ↔ 1.02 over 5s) reads as alive without being distracting.
-
-## Suggested implementation stack
-
-This matches the `animation-playground` project conventions:
-
-- **GSAP** for spoke tweens and the orbit ring rotation (timeline control, easy ticker access for the twinkle sync).
-- **CSS animations** for L1 ambient breathing (keeps it off the main JS thread).
-- **IntersectionObserver** to gate the whole animation to visible viewport.
-- **`prefers-reduced-motion`** check: degrade to static rendering or single subtle pulse on the centre.
-
-## Animation orchestration order
-
-When the diagram scrolls into view:
-
-1. `t = 0.0s` — L1 breathing kicks in (CSS animation already running from page load; just becomes visible)
-2. `t = 0.0s` — Orbit ring starts rotating (was paused; resume)
-3. `t = 0.3s` — Icons begin staggered entrance (random order, ~0.06s between)
-4. `t = 1.5s` — All icons settled; spokes begin flowing inward (staggered)
-5. `t = 2.0s` — Dot twinkles begin firing as ring rotation passes them
-
-## Performance budget
-
-- 25 simultaneous spoke tweens + 1 ring rotation + per-frame angle check for twinkle = cheap on desktop.
-- On mid-range mobile, the per-frame `gsap.getProperty(ringEl, 'rotation')` lookup is fine, but consider memoising the dot positions outside the ticker (already done in the snippet above).
-- Wrap everything in `IntersectionObserver` to pause when offscreen.
-- Target 60fps; below 50fps on a real mobile device, drop the dot-twinkle feature first (it's the most expensive bit).
-
-## Asset weight
-
-The SVG is ~590 KB because the mascot is embedded as base64 PNG inside `<defs>`. For a marketing landing page this matters.
-
-**Recommendation:** extract the mascot to an optimised external `.webp` and replace the `<pattern>` fill with an `<image>` element pointing to it. This drops the SVG to ~30 KB.
-
-```svg
-<!-- replace this in <defs> -->
-<pattern id="pattern0_7540_2644" patternContentUnits="objectBoundingBox" width="1" height="1">
-  <use xlink:href="#image0_7540_2644" transform="scale(0.00121065)"/>
-</pattern>
-
-<!-- with -->
-<pattern id="pattern0_7540_2644" patternContentUnits="objectBoundingBox" width="1" height="1">
-  <image href="/assets/devai-mascot.webp" width="1" height="1" preserveAspectRatio="xMidYMid slice"/>
-</pattern>
-```
-
-And remove the giant `<image id="image0_7540_2644">` block from `<defs>`.
-
-## What NOT to animate
-
-- `#orbit-halo` (wide blurred ellipse) — atmospheric anchor, leave static.
-- L2 arcs and curved text — fully static per spec.
-- Icon internals (the rects and paths inside `icon-NN-*` groups) — animating logo internals harms brand recognition.
-- Icon text labels (`#icon-labels`) — must stay legible.
-
-## Verification before merging
-
-1. Render the static SVG (JS disabled) and confirm it matches the original pixel-for-pixel.
-2. Performance panel with CPU throttled 4×: spoke animation should stay above 50fps.
-3. Toggle `prefers-reduced-motion: reduce` in DevTools and confirm graceful degradation.
-4. On Safari: confirm `userSpaceOnUse` gradient rotates with the `<circle>` transform (it should, but Safari occasionally surprises).
+1. Render the SVG alone (Chrome headless or `qlmanage`) and look for label overlaps and misplaced discs.
+2. Serve the repo (`python3 -m http.server`) and open `pages/SolutionDiagram.html`; console must be clean.
+3. Confirm every `icon-` group reaches opacity 1 / scale 1, the mascot fades in, spokes flow toward the centre, and the comet twinkles dots including those under new icons.
+4. Check that each icon's spoke flashes as the comet passes, and that free seats don't.
+5. Check `prefers-reduced-motion: reduce`.
+6. Check Safari (gradient/mask rendering in new logos, animation smoothness).
 
 ## Open follow-ups
 
-- Confirm actual brand mapping for the 14 icons and rename IDs semantically.
-- Decide whether icons get hover state (e.g. scale 1.05, brighten touching spokes).
-- Decide whether the mascot has micro-interaction on hover (eye blink, small bob). Currently scoped as static or gentle breathe.
-- Extract mascot to external `.webp` to reduce file weight.
+- Convert older outlined-path labels and the newer `<text>` labels to one style.
+- Decide on icon hover states (scale, brighten the spoke). The comet pass already brightens the spoke (see Spoke highlight), and a hover state could reuse `pulseIcon()`.
+- Optionally optimise `devai-mascot.png` (webp) for page weight.

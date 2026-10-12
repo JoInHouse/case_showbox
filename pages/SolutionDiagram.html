@@ -29,11 +29,13 @@
     }
 
     #svg-container {
+      position: relative;
       width: min(841px, 100%);
       aspect-ratio: 841 / 820;
     }
 
-    #svg-container svg {
+    #svg-container > svg {
+      position: relative;   /* stacks above #glow-layer */
       width: 100%;
       height: 100%;
       display: block;
@@ -43,8 +45,24 @@
     /* ── Layer 1: ambient breathe ────────────────────────────────── */
     /* Opacity-only: avoid scale on feGaussianBlur containers —
        Safari re-rasterises the blur every frame when transform changes. */
-    #ambient-glow {
+    /* The blurred glow lives in its own <svg> inside #glow-layer (see
+       splitLayers). Safari has no compositor layers for SVG children, so
+       a filtered group inside the main SVG is re-blurred whenever anything
+       above it repaints. As a separate element, the breathe is a pure
+       composited opacity change and the blur is rasterised once. */
+    #glow-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
       animation: breathe 4s ease-in-out infinite;
+      will-change: opacity;
+    }
+    #glow-layer svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
     }
 
     @keyframes breathe {
@@ -52,7 +70,14 @@
       50%       { opacity: 1.00; }
     }
 
-    /* ── Center mascot float: handled by GSAP ───────────────────── */
+    /* ── Center mascot: <img> layer floated by GSAP (x/y → translate3d) ── */
+    /* A transform on a positioned <img> is composited; moving the original
+       pattern-filled <rect> repainted 459×459px of SVG every frame. */
+    #center-logo {
+      position: absolute;
+      pointer-events: none;
+      will-change: transform;
+    }
 
     /* ── Orbit ring: suppress original gradient stroke (comet overlay replaces it) ── */
     #orbit-ring { stroke: none; }
@@ -60,10 +85,14 @@
     /* ── Spokes: thicken slightly + double the dot gap (SVG is "0 4") ── */
     .spoke { stroke-width: 2; stroke-dasharray: 0 8; }
 
+    /* ── Spoke highlight: bright copy of a spoke, flashed when the comet passes its icon ── */
+    .spoke-hl { stroke-width: 3; stroke-dasharray: 0 8; stroke-linecap: round; fill: none; pointer-events: none; }
+
     /* ── Reduced motion: no animation at all ────────────────────── */
     @media (prefers-reduced-motion: reduce) {
-      #ambient-glow {
+      #glow-layer {
         animation: none;
+        will-change: auto;
       }
     }
 
@@ -96,12 +125,51 @@
         // so they still resolve correctly after the SVG is injected inline here.
         svgText = svgText.replace(/href="devai-mascot\.png"/g, 'href="../img/devai-mascot.png"');
         document.getElementById('svg-container').innerHTML = svgText;
+        splitLayers();
         initAnimations();
       })
       .catch(err => {
         console.error('SVG load failed:', err);
         document.getElementById('svg-container').textContent = 'SVG failed to load. Open via a local server.';
       });
+
+    // ── Lift the glow and mascot out of the SVG into composited layers ──────
+    // Both are referenced by id elsewhere, so ids are preserved.
+    function splitLayers() {
+      const container = document.getElementById('svg-container');
+      const svg       = container.querySelector('svg');
+
+      // Glow: own <svg> behind the diagram. Its filter/gradients stay in the
+      // main SVG's <defs> (ids are document-scoped, so url(#…) still resolves).
+      const glow = svg.querySelector('#ambient-glow');
+      if (glow) {
+        const layer = document.createElement('div');
+        layer.id = 'glow-layer';
+        const glowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        glowSvg.setAttribute('viewBox', svg.getAttribute('viewBox'));
+        glowSvg.setAttribute('aria-hidden', 'true');
+        glowSvg.appendChild(glow);
+        layer.appendChild(glowSvg);
+        container.insertBefore(layer, svg);
+      }
+
+      // Mascot: replace the pattern-filled rect with a plain <img>, placed
+      // in % of the viewBox so it scales with the container.
+      const logo = svg.querySelector('#center-logo');
+      const rect = logo && logo.querySelector('rect');
+      if (rect) {
+        const [, , vbW, vbH] = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+        const img = document.createElement('img');
+        img.id  = 'center-logo';
+        img.src = '../img/devai-mascot.png';
+        img.alt = '';
+        img.style.left  = (rect.getAttribute('x')      / vbW * 100) + '%';
+        img.style.top   = (rect.getAttribute('y')      / vbH * 100) + '%';
+        img.style.width = (rect.getAttribute('width')  / vbW * 100) + '%';
+        logo.remove();
+        container.appendChild(img);   // last child → on top, as before
+      }
+    }
 
     // ── Respect reduced-motion at the JS level too ───────────────────────────
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -136,7 +204,7 @@
       const TRAIL_COUNT  = 28;       // enough circles for a continuous ribbon
       const TRAIL_STEP   = 0.0018;   // tight spacing (~3.3 px) so circles overlap into a smooth tail
 
-      const svgEl      = document.querySelector('#svg-container svg');
+      const svgEl      = document.querySelector('#svg-container > svg');   // main SVG (the glow layer's svg sits inside a div)
       const orbitTrack = document.querySelector('#orbit-track');
 
       // Build comet DOM: trail circles first (rendered behind head)
@@ -187,6 +255,81 @@
         return { el, angle };
       });
 
+      // ── Icon angles for the comet-pass pulse ─────────────────────────────────
+      // Icons sit on the same 15° seats as the dots; angle comes from each
+      // group's own bbox centre (local coords, unaffected by the entrance scale).
+      const pulseIcons = Array.from(document.querySelectorAll('[id^="icon-"]:not(#icon-labels)')).map(el => {
+        const bbox  = el.getBBox();
+        let angle   = Math.atan2(bbox.y + bbox.height / 2 - CENTER.y,
+                                 bbox.x + bbox.width  / 2 - CENTER.x) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+        return { el, angle, ready: true, spokeHl: null };
+      });
+
+      // ── Spoke highlights ─────────────────────────────────────────────────────
+      // Each spoke gets a hidden, brighter copy just above it (same dot flow,
+      // driven in startSpokes). Its gradient runs bright cyan from the icon end
+      // and fades out before the centre, so the flash reads as icon → hub.
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const defs   = svgEl.querySelector('defs');
+      const spokeSeats = Array.from(document.querySelectorAll('.spoke')).map(spoke => {
+        const len   = spoke.getTotalLength();
+        const start = spoke.getPointAtLength(0);     // icon end (paths run icon → centre)
+        const end   = spoke.getPointAtLength(len);
+
+        const grad = document.createElementNS(SVG_NS, 'linearGradient');
+        grad.id = `${spoke.id}-hl-grad`;
+        grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+        grad.setAttribute('x1', start.x); grad.setAttribute('y1', start.y);
+        grad.setAttribute('x2', end.x);   grad.setAttribute('y2', end.y);
+        [[0, '#E9FFFA', 1], [0.15, '#3CF9D1', 1], [0.55, '#3CF9D1', 0.45], [0.9, '#3CF9D1', 0]]
+          .forEach(([offset, color, opacity]) => {
+            const stop = document.createElementNS(SVG_NS, 'stop');
+            stop.setAttribute('offset', offset);
+            stop.setAttribute('stop-color', color);
+            stop.setAttribute('stop-opacity', opacity);
+            grad.appendChild(stop);
+          });
+        defs.appendChild(grad);
+
+        const hl = document.createElementNS(SVG_NS, 'path');
+        hl.id = `${spoke.id}-hl`;
+        hl.setAttribute('class', 'spoke-hl');
+        hl.setAttribute('d', spoke.getAttribute('d'));
+        hl.setAttribute('stroke', `url(#${grad.id})`);
+        hl.setAttribute('opacity', 0);
+        spoke.after(hl);
+
+        let angle = Math.atan2(start.y - CENTER.y, start.x - CENTER.x) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+        return { hl, angle };
+      });
+
+      // Pair each icon with the spoke whose outer end is nearest its seat.
+      pulseIcons.forEach(ic => {
+        let best = null, bestDiff = 999;
+        spokeSeats.forEach(s => {
+          let diff = Math.abs(s.angle - ic.angle);
+          diff = Math.min(diff, 360 - diff);
+          if (diff < bestDiff) { bestDiff = diff; best = s; }
+        });
+        if (best && bestDiff < 7.5) ic.spokeHl = best.hl;
+      });
+
+      // Quick scale bump: transform only, no filter (cheap in Safari).
+      // The paired spoke flashes in, then fades out more slowly (opacity only).
+      function pulseIcon(ic) {
+        gsap.to(ic.el, {
+          scale: 1.12, duration: 0.12, yoyo: true, repeat: 1,
+          ease: 'sine.inOut', overwrite: 'auto',
+        });
+        if (ic.spokeHl) {
+          gsap.timeline({ overwrite: true })
+            .to(ic.spokeHl, { attr: { opacity: 1 }, duration: 0.15, ease: 'sine.out' })
+            .to(ic.spokeHl, { attr: { opacity: 0 }, duration: 0.9, ease: 'sine.in' });
+        }
+      }
+
       let lastTriggered  = -1;
       let twinkleActive  = false;
       gsap.delayedCall(2.0, () => { twinkleActive = true; });
@@ -232,6 +375,16 @@
           } else if (nearestDist > 20) {
             lastTriggered = -1;   // reset so same dot fires again next revolution
           }
+
+          // Icon pulse: fire once as the comet reaches an icon's seat, re-arm
+          // once it has moved well away (same pattern as the twinkle above).
+          for (let i = 0; i < pulseIcons.length; i++) {
+            const ic = pulseIcons[i];
+            let diff = Math.abs(ic.angle - cometAngle);
+            diff = Math.min(diff, 360 - diff);
+            if (diff < 7 && ic.ready) { ic.ready = false; pulseIcon(ic); }
+            else if (diff > 20)        { ic.ready = true; }
+          }
         },
       });
 
@@ -262,7 +415,7 @@
       }
 
       // ── Layer 5: Icon entrance (staggered scale-in) ─────────────────────────
-      // Exclude #icon-labels (text must stay legible) and #center-logo (handled separately)
+      // Exclude #icon-labels (text must stay legible) and #center-logo (an <img> layer, handled separately)
       const iconSelector = '[id^="icon-"]:not(#icon-labels)';
       gsap.set(iconSelector, { scale: 0, opacity: 0, transformOrigin: '50% 50%' });
       gsap.set('#center-logo', { opacity: 0 });
@@ -282,24 +435,16 @@
 
       function floatMascot() {
         const mascot = document.querySelector('#center-logo');
-        // Remove any inline CSS transform from the entrance tween so we can
-        // drive the SVG transform attribute directly (Safari-safe).
-        mascot.style.transform = '';
-        mascot.style.webkitTransform = '';
-        mascot.removeAttribute('data-svg-origin');   // GSAP SVG origin marker
-        mascot.setAttribute('transform', 'translate(0, 0)');
-
-        const pos = { x: 0, y: 0 };
+        // ±20 viewBox units of a 459-unit-wide image, as % of the image's own
+        // width, so the drift scales with the container on resize.
+        const MAX = 20 / 459 * 100;
         function step() {
-          gsap.to(pos, {
-            x: gsap.utils.random(-20, 20),
-            y: gsap.utils.random(-20, 20),
+          gsap.to(mascot, {
+            xPercent: gsap.utils.random(-MAX, MAX),
+            yPercent: gsap.utils.random(-MAX, MAX),
             duration: gsap.utils.random(2, 4),
             ease: 'sine.inOut',
             overwrite: true,
-            onUpdate() {
-              mascot.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
-            },
             onComplete: step,
           });
         }
@@ -315,6 +460,7 @@
       // Single tween drives all spokes via one onUpdate — avoids 25 independent
       // GSAP tweens each triggering their own style recalc in Safari.
       const spokes = Array.from(document.querySelectorAll('.spoke'));
+      const highlights = spokes.map(s => document.getElementById(`${s.id}-hl`)); // may be null
       const offsets = spokes.map((_, i) => i * 0.05 * (40 / 2.2)); // stagger as initial offset
       const state = { t: 0 };
       gsap.to(state, {
@@ -324,7 +470,11 @@
         ease: 'none',
         onUpdate() {
           for (let i = 0; i < spokes.length; i++) {
-            spokes[i].style.strokeDashoffset = -(state.t + offsets[i]);
+            const offset = -(state.t + offsets[i]);
+            spokes[i].style.strokeDashoffset = offset;
+            // Highlight copies flow in lockstep, but only cost a write while visible
+            const hl = highlights[i];
+            if (hl && hl.getAttribute('opacity') !== '0') hl.style.strokeDashoffset = offset;
           }
         },
       });
