@@ -1,0 +1,22 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<mask id="stroke0_11797_6670" maskUnits="userSpaceOnUse" x="1.66602" y="5.66797" width="21" height="7" fill="black">
+<rect fill="white" x="1.66602" y="5.66797" width="21" height="7"/>
+<path d="M2.66602 7.66797C2.66602 7.11568 3.11373 6.66797 3.66602 6.66797H20.3327C20.885 6.66797 21.3327 7.11568 21.3327 7.66797V10.3346C21.3327 10.8869 20.885 11.3346 20.3327 11.3346H3.66601C3.11373 11.3346 2.66602 10.8869 2.66602 10.3346V7.66797Z"/>
+</mask>
+<path d="M3.66601 11.3346H20.3327C20.885 11.3346 21.3327 10.8869 21.3327 10.3346V7.66797C21.3327 7.11568 20.885 6.66797 20.3327 6.66797H3.66602C3.11373 6.66797 2.66602 7.11568 2.66602 7.66797V10.3346C2.66602 10.8869 3.11373 11.3346 3.66601 11.3346Z" stroke-width="2" stroke="white" mask="url(#stroke0_11797_6670)"/>
+<rect x="4" y="8.5" width="2" height="2" stroke="white" stroke-linejoin="round"/>
+<rect x="7.33301" y="8.5" width="2" height="2" stroke="white" stroke-linejoin="round"/>
+<rect x="10.666" y="8.5" width="2" height="2" stroke="white" stroke-linejoin="round"/>
+<rect x="14" y="8.5" width="2" height="2" stroke="white" stroke-linejoin="round"/>
+<circle cx="18.1667" cy="8.2487" r="0.166667" stroke="white"/>
+<circle cx="12.333" cy="21.5" r="1" stroke="white"/>
+<circle cx="5" cy="19.5" r="1" stroke="white"/>
+<circle cx="19.666" cy="19.5" r="1" stroke="white"/>
+<path d="M6 19.0013H7.66667V13.668" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
+<path d="M18.6667 19.0013H17V13.668" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
+<path d="M12.333 20.0013V13.668" stroke-linecap="round" stroke="white"/>
+<circle cx="18.1667" cy="10.2487" r="0.166667" stroke="white"/>
+<circle cx="20.1667" cy="8.2487" r="0.166667" stroke="white"/>
+<circle cx="20.1667" cy="10.2487" r="0.166667" stroke="white"/>
+<path d="M2.66602 6.66797L3.53941 4.0377C3.81097 3.2199 4.5758 2.66797 5.43751 2.66797H18.5139C19.3638 2.66797 20.1209 3.20515 20.4016 4.00737L21.3327 6.66797" stroke="white"/>
+</svg>
