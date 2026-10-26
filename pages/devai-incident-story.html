@@ -415,7 +415,7 @@
       background: var(--color-story-flag-bg); border-radius: var(--radius-story);
       font-size: 10px; line-height: 13px; color: var(--color-story-flag-text);
     }
-    .flag svg { flex: none; width: 14px; height: 14px; }
+    .flag svg { flex: none; width: 14px; height: 14px; transform-origin: 10% 95%; }   /* waves from the foot of the pole */
     .flag p { width: 110px; }
     .flag--lg { font-size: var(--text-xs); line-height: 15px; }
     .story__stage .id { white-space: nowrap; }   /* quoted identifiers never break at their hyphen */
@@ -459,13 +459,15 @@
          [data-strike="N"] claim shown as true until step N, then struck through
        Without JS none of these classes exist and the hero shows the final frame.
        Entering uses each element's --d (stagger); leaving is quick and immediate.
+       Budget (plan phase 6): each step's motion is done within 800 ms of the step change,
+       because readers scroll faster than that. Keep --d + --dur-step under it.
        Delays scale with --motion-scale too, so reduced motion lands every step at once.
        ============================================================ */
     :root {
-      --dur-step: calc(400ms * var(--motion-scale));
+      --dur-step: calc(320ms * var(--motion-scale));
       --dur-step-out: calc(200ms * var(--motion-scale));
-      --dur-strike: calc(300ms * var(--motion-scale));
-      --dur-segment: calc(160ms * var(--motion-scale));
+      --dur-strike: calc(240ms * var(--motion-scale));
+      --dur-segment: calc(120ms * var(--motion-scale));
       --ease-step: cubic-bezier(0.2, 0.7, 0.2, 1);
       --dim: 0.3;
     }
@@ -510,16 +512,16 @@
     .story .timeline__bar { --enter: scaleX(0); transform-origin: 0 50%; }
 
     /* Step 1, the ticket's view: ticket → its scope → what ServiceNow said */
-    .story .wire--scope, .story .port--neutral { --d: 100ms; }
-    .story [data-row="switch"] .claim { --d: 200ms; }
+    .story .wire--scope, .story .port--neutral { --d: 80ms; }
+    .story [data-row="switch"] .claim { --d: 160ms; }
     /* Steps 2–4, each seam: node lights → tool claim → strike → red flag */
-    .story :is([data-row="host"], [data-row="vm"]) .claim { --d: 100ms; }
-    .story [data-row="vm"] .claim + .claim { --d: 180ms; }
-    .story :is([data-row="host"], [data-row="vm"]) .flag { --d: 520ms; }
-    .story .node--ghost, .story .wire--ghost { --d: 150ms; }
-    .story [data-row="app"] .flag { --d: 200ms; }
+    .story :is([data-row="host"], [data-row="vm"]) .claim { --d: 80ms; }
+    .story [data-row="vm"] .claim + .claim { --d: 150ms; }
+    .story :is([data-row="host"], [data-row="vm"]) .flag { --d: 440ms; }
+    .story .node--ghost, .story .wire--ghost { --d: 120ms; }
+    .story [data-row="app"] .flag { --d: 160ms; }
     .claim__text s { transition: background-size var(--dur-strike) ease calc(var(--d-strike, 0ms) * var(--motion-scale)); }
-    .story :is([data-row="host"], [data-row="vm"]) s { --d-strike: 300ms; }
+    .story :is([data-row="host"], [data-row="vm"]) s { --d-strike: 240ms; }
     .story.is-live:not(.s2) [data-strike="2"] s,
     .story.is-live:not(.s3) [data-strike="3"] s,
     .story.is-live:not(.s5) [data-strike="5"] s {
@@ -533,29 +535,29 @@
         stroke-dashoffset var(--dur-segment) linear calc(var(--d, 0ms) * var(--motion-scale)),
         opacity var(--dur-step) ease;
     }
-    .story [data-seg="2"] { --d: 160ms; }
-    .story [data-seg="3"] { --d: 320ms; }
-    .story [data-seg="4"] { --d: 480ms; }
+    .story [data-seg="2"] { --d: 110ms; }
+    .story [data-seg="3"] { --d: 220ms; }
+    .story [data-seg="4"] { --d: 330ms; }
     .story.is-live:not(.s5) .wire--impact { stroke-dashoffset: 1; transition-duration: 0s; transition-delay: 0ms; }
     .story.is-live:not(.s5) .port:not(.port--neutral) { stroke: var(--color-story-wire); }
-    .story .band--2 { --d: 120ms; }
-    .story .band--3 { --d: 240ms; }
-    .story [data-row="switch"] .flag { --d: 150ms; }
-    .story [data-row="switch"] s { --d-strike: 100ms; }
-    .story .port--stop, .story .outcome { --d: 640ms; }
-    .story [data-row="outcome"] .flag { --d: 700ms; }
+    .story .band--2 { --d: 100ms; }
+    .story .band--3 { --d: 200ms; }
+    .story [data-row="switch"] .flag { --d: 120ms; }
+    .story [data-row="switch"] s { --d-strike: 80ms; }
+    .story .port--stop, .story .outcome { --d: 440ms; }   /* as the red path arrives */
+    .story [data-row="outcome"] .flag { --d: 440ms; }   /* lands with the outcome; its pulse ends at 800 ms */
 
     /* Step 6, where the time goes: the timeline spans draw left to right */
-    .story .timeline__span:nth-child(2) > * { --d: 250ms; }
-    .story .timeline__span:nth-child(3) > * { --d: 500ms; }
+    .story .timeline__span:nth-child(2) > * { --d: 160ms; }
+    .story .timeline__span:nth-child(3) > * { --d: 320ms; }
 
     /* Step 7, with DevAI: the green column slides in row by row; the red path steps back */
-    .story [data-row="switch"] .devai { --d: 100ms; }
-    .story [data-row="host"] .devai   { --d: 200ms; }
-    .story [data-row="vm"] .devai     { --d: 300ms; }
-    .story [data-row="app"] .devai    { --d: 400ms; }
-    .story .story__timeline-label     { --d: 400ms; }
-    .story .story__timeline .devai    { --d: 500ms; }
+    .story [data-row="switch"] .devai { --d: 60ms; }
+    .story [data-row="host"] .devai   { --d: 140ms; }
+    .story [data-row="vm"] .devai     { --d: 220ms; }
+    .story [data-row="app"] .devai    { --d: 300ms; }
+    .story .story__timeline-label     { --d: 320ms; }
+    .story .story__timeline .devai    { --d: 400ms; }
     .story.is-live.s7 .wire--impact { opacity: 0.4; }
 
     /* Detail panel: the compact layout's stand-in for the card columns (filled from JS
@@ -1286,6 +1288,7 @@
         const n = clamp(hero.dataset.step);
         if (n === current) return;
         const first = current === null;
+        const forward = !first && n > current;
         current = n;
         for (let i = 1; i <= LAST_STEP; i++) hero.classList.toggle(`s${i}`, i <= n);
         title.textContent = STORY[n].title;
@@ -1300,15 +1303,39 @@
         if (!first) {
           status.textContent = `Step ${n + 1} of ${STORY.length}: ${STORY[n].title}`;
           if (!reduceMotion.matches) {
-            [title, body, ...detailPanel.children].forEach((el, i) => el.animate(
+            const panelCards = detailPanel.offsetParent ? [...detailPanel.children] : [];   /* compact layouts only */
+            [title, body, ...panelCards].forEach((el, i) => el.animate(
               [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }],
               { duration: 300, delay: i * 60, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' },
             ));
           }
+          if (forward) pulseFlags(n);
         }
       }
 
       function setStep(n) { hero.dataset.step = String(clamp(n)); }
+
+      /* One-time accent (plan phase 6): moving forward into a step that raises red flags
+         makes each new flag wave once and ring as it lands. Web Animations rather than CSS,
+         because it must not replay when scrolling back up through the step. The flags that
+         count are the visible ones: the diagram's, or the detail panel's copies. */
+      function pulseFlags(n) {
+        if (reduceMotion.matches) return;
+        hero.querySelectorAll(`.flag[data-from="${n}"]`).forEach((flag) => {
+          if (!flag.offsetParent) return;                             // display: none in this layout
+          const delay = detailPanel.contains(flag)
+            ? ([...detailPanel.children].indexOf(flag) + 2) * 60      // matches the panel's entrance stagger
+            : parseFloat(getComputedStyle(flag).getPropertyValue('--d')) || 0;
+          flag.querySelector('svg').animate(
+            [{ transform: 'rotate(0)' }, { transform: 'rotate(-14deg)', offset: 0.3 }, { transform: 'rotate(9deg)', offset: 0.65 }, { transform: 'rotate(0)' }],
+            { duration: 360, delay, easing: 'ease-in-out' },
+          );
+          flag.animate(
+            [{ boxShadow: '0 0 0 0 rgba(255, 59, 48, 0)' }, { boxShadow: '0 0 0 3px rgba(255, 59, 48, 0.35)', offset: 0.4 }, { boxShadow: '0 0 0 7px rgba(255, 59, 48, 0)' }],
+            { duration: 360, delay, easing: 'ease-out' },
+          );
+        });
+      }
 
       /* Scroll → step. The track's top enters the viewport bottom as the hero pins; its
          bottom reaches the viewport bottom as the content sheet starts to rise. */
